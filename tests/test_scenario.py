@@ -68,6 +68,29 @@ class ScenarioTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             Scenario("Invalid", "machine", 1, jobs)
+    
+    def test_rejects_empty_resource_name(self):
+        with self.assertRaises(ValueError):
+            Scenario("Test", " ", 1, self.jobs)
+
+    def test_rejects_non_positive_resource_capacity(self):
+        for capacity in (0, -1):
+            with self.subTest(capacity=capacity):
+                with self.assertRaises(ValueError):
+                    Scenario("Test", "machine", capacity, self.jobs)
+
+    def test_rejects_invalid_arrival_time(self):
+        for arrival in (-1, float("inf"), float("nan")):
+            with self.subTest(arrival=arrival):
+                with self.assertRaises(ValueError):
+                    ServiceJob("A", arrival, 2)
+
+    def test_rejects_invalid_service_duration(self):
+        for duration in (-1, float("inf"), float("nan")):
+            with self.subTest(duration=duration):
+                with self.assertRaises(ValueError):
+                    ServiceJob("A", 0, duration)
+
 
 
 if __name__ == "__main__":

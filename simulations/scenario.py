@@ -1,13 +1,18 @@
 
 """Define and compare discrete-event simulation scenarios."""
 
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from math import isfinite
+
+
 from simulations.engine import SimulationEngine
 from simulations.metrics import EntityMetrics, calculate_entity_metrics
 from simulations.resource import Resource
+
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +22,20 @@ class ServiceJob:
     entity_id: str
     arrival_time: float
     service_duration: float
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.entity_id, str) or not self.entity_id.strip():
+            raise ValueError("Job identifier must be non-empty")
+
+        for name, value in (
+            ("arrival_time", self.arrival_time),
+            ("service_duration", self.service_duration),
+        ):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise TypeError(f"{name} must be a number")
+
+            if not isfinite(value) or value < 0:
+                raise ValueError(f"{name} must be finite and non-negative")
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,8 +51,25 @@ class Scenario:
         if not isinstance(self.name, str) or not self.name.strip():
             raise ValueError("Scenario name must be non-empty")
 
+        if (
+            not isinstance(self.resource_name, str)
+            or not self.resource_name.strip()
+        ):
+            raise ValueError("Resource name must be non-empty")
+
+        if isinstance(self.resource_capacity, bool) or not isinstance(
+            self.resource_capacity, int
+        ):
+            raise TypeError("Resource capacity must be an integer")
+
+        if self.resource_capacity <= 0:
+            raise ValueError("Resource capacity must be positive")
+
         if not isinstance(self.jobs, tuple) or not self.jobs:
             raise ValueError("Scenario must contain at least one job")
+
+        if any(not isinstance(job, ServiceJob) for job in self.jobs):
+            raise TypeError("All jobs must be ServiceJob instances")
 
         job_ids = [job.entity_id for job in self.jobs]
         if len(job_ids) != len(set(job_ids)):
