@@ -1,43 +1,50 @@
 
-from simulations.engine import SimulationEngine
-from simulations.resource import Resource
-from simulations.metrics import calculate_entity_metrics
+from simulations.scenario import (
+    Scenario,
+    ServiceJob,
+    compare_scenarios,
+)
 
 
 def main():
-    # 1. Create the simulation engine.
-    engine = SimulationEngine()
+    # Keep the workload identical in both scenarios.
+    jobs = (
+        ServiceJob("A", arrival_time=0, service_duration=6),
+        ServiceJob("B", arrival_time=2, service_duration=4),
+    )
 
-    # 2. Add one machine.
-    engine.add_resource(Resource("machine", capacity=1))
+    scenarios = (
+        Scenario(
+            name="One machine",
+            resource_name="machine",
+            resource_capacity=1,
+            jobs=jobs,
+        ),
+        Scenario(
+            name="Two machines",
+            resource_name="machine",
+            resource_capacity=2,
+            jobs=jobs,
+        ),
+    )
 
-    # 3. Schedule two jobs.
-    engine.schedule_service("A", "machine", arrival_time=0, duration=6)
-    engine.schedule_service("B", "machine", arrival_time=2, duration=4)
+    results = compare_scenarios(scenarios)
 
-    # 4. Run the simulation.
-    events = engine.run()
+    print("\n--- Scenario Comparison ---")
 
-    # 5. Display the event log.
-    print("\n--- Simulation Event Log ---")
-    for event in events:
-        print(
-            f"Time: {event.time:>4} | "
-            f"Job: {event.entity_id} | "
-            f"Event: {event.event_type}"
-        )
+    for result in results:
+        print(f"\n{result.scenario_name}")
+        print(f"Average waiting time: {result.average_waiting_time:.2f}")
+        print(f"Final completion time: {result.completion_time:.2f}")
 
-    # 6. Calculate and display metrics.
-    metrics = calculate_entity_metrics(events)
-
-    print("\n--- Job Metrics ---")
-    for item in metrics:
-        print(
-            f"Job {item.entity_id}: "
-            f"Waiting={item.waiting_time}, "
-            f"Service={item.service_time}, "
-            f"Time in system={item.time_in_system}"
-        )
+        print("Job details:")
+        for item in result.entity_metrics:
+            print(
+                f"  {item.entity_id}: "
+                f"wait={item.waiting_time:.2f}, "
+                f"service={item.service_time:.2f}, "
+                f"total={item.time_in_system:.2f}"
+            )
 
 
 if __name__ == "__main__":
