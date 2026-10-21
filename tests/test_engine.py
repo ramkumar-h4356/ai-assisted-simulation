@@ -118,5 +118,157 @@ class SimulationEngineTests(unittest.TestCase):
         self.assertEqual(event_times, sorted(event_times))
 
 
+
+    def test_simultaneous_arrivals_are_both_recorded(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("machine", capacity=1))
+
+        engine.schedule_service("A", "machine", 0, 2)
+        engine.schedule_service("B", "machine", 0, 1)
+
+        events = engine.run()
+
+        arrivals = [
+            event for event in events
+            if event.event_type == "arrived"
+        ]
+
+        self.assertEqual(len(arrivals), 2)
+        self.assertEqual(
+            {event.entity_id for event in arrivals},
+            {"A", "B"},
+        )
+        self.assertEqual([event.time for event in arrivals], [0, 0])
+
+
+    def test_entity_can_pass_through_two_service_stages(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("registration", capacity=1))
+        engine.add_resource(Resource("consultation", capacity=1))
+
+        engine.schedule_route(
+            entity_id="A",
+            arrival_time=0,
+            stages=[
+                ("registration", 2),
+                ("consultation", 5),
+            ],
+        )
+
+        events = engine.run()
+
+        actual = [
+            (event.event_type, event.resource_name, event.time)
+            for event in events
+        ]
+
+        self.assertEqual(
+            actual,
+            [
+                ("arrived", "registration", 0),
+                ("service_started", "registration", 0),
+                ("service_completed", "registration", 2),
+                ("service_started", "consultation", 2),
+                ("service_completed", "consultation", 7),
+            ],
+        ) 
+
+    def test_empty_route_is_rejected(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("registration", capacity=1))
+
+        with self.assertRaises(ValueError):
+            engine.schedule_route(
+                entity_id="A",
+                arrival_time=0,
+                stages=[],
+            ) 
+    def test_route_rejects_unknown_resource(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("registration", capacity=1))
+
+        with self.assertRaises(ValueError):
+            engine.schedule_route(
+                entity_id="A",
+                arrival_time=0,
+                stages=[
+                    ("doctor", 5),
+                ],
+            )
+    def test_route_rejects_negative_stage_duration(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("registration", capacity=1))
+
+        with self.assertRaises(ValueError):
+            engine.schedule_route(
+                entity_id="A",
+                arrival_time=0,
+                stages=[
+                    ("registration", -2),
+                ],
+            )
+    def test_duplicate_entity_ids_in_routes_are_rejected(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("registration", capacity=1))
+
+        engine.schedule_route(
+            entity_id="A",
+            arrival_time=0,
+            stages=[("registration", 2)],
+        )
+
+        with self.assertRaises(ValueError):
+            engine.schedule_route(
+                entity_id="A",
+                arrival_time=1,
+                stages=[("registration", 3)],
+            )
+    def test_entity_cannot_be_scheduled_as_service_and_route(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("registration", capacity=1))
+
+        engine.schedule_service("A", "registration", 0, 2)
+
+        with self.assertRaises(ValueError):
+            engine.schedule_route(
+                entity_id="A",
+                arrival_time=1,
+                stages=[("registration", 3)],
+            )
+    def test_route_waits_when_next_resource_is_busy(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("registration", capacity=1))
+        engine.add_resource(Resource("consultation", capacity=1))
+
+        # A occupies consultation from time 0 to 5.
+        engine.schedule_route(
+            entity_id="A",
+            arrival_time=0,
+            stages=[("consultation", 5)],
+        )
+
+        # B finishes registration at time 2, then must wait for consultation.
+        engine.schedule_route(
+            entity_id="B",
+            arrival_time=0,
+            stages=[
+                ("registration", 2),
+                ("consultation", 1),
+            ],
+        )
+
+        events = engine.run()
+        for event in events:
+            print(event)
+        b_consultation_start = next(
+            event.time
+            for event in events
+            if event.entity_id == "B"
+            and event.event_type == "service_started"
+            and event.resource_name == "consultation"
+        )
+
+        self.assertEqual(b_consultation_start, 5)
+    
 if __name__ == "__main__":
     unittest.main()
