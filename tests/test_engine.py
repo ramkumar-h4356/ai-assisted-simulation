@@ -105,5 +105,18 @@ class SimulationEngineTests(unittest.TestCase):
             engine.run()
 
 
+    def test_events_are_recorded_in_chronological_order(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("machine", capacity=1))
+
+        engine.schedule_service("A", "machine", 3, 2)
+        engine.schedule_service("B", "machine", 0, 1)
+
+        events = engine.run()
+        event_times = [event.time for event in events]
+
+        self.assertEqual(event_times, sorted(event_times))
+
+
 if __name__ == "__main__":
     unittest.main()
