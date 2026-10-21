@@ -74,6 +74,36 @@ class SimulationEngineTests(unittest.TestCase):
         self.assertEqual(start_times["A"], 0)
         self.assertEqual(start_times["B"], 6)
 
+    
+    def test_scheduling_after_run_is_rejected(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("machine", capacity=1))
+        engine.schedule_service("A", "machine", 0, 2)
+
+        engine.run()
+
+        with self.assertRaises(RuntimeError):
+            engine.schedule_service("B", "machine", 3, 1)
+
+    def test_adding_resource_after_run_is_rejected(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("machine", capacity=1))
+        engine.schedule_service("A", "machine", 0, 2)
+
+        engine.run()
+
+        with self.assertRaises(RuntimeError):
+            engine.add_resource(Resource("another_machine", capacity=1))
+    def test_running_engine_twice_is_rejected(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("machine", capacity=1))
+        engine.schedule_service("A", "machine", 0, 2)
+
+        engine.run()
+
+        with self.assertRaises(RuntimeError):
+            engine.run()
+
 
 if __name__ == "__main__":
     unittest.main()

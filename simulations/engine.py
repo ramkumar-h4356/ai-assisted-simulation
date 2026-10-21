@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import isfinite
 
+
 import simpy
 
 from .resource import Resource
@@ -29,16 +30,20 @@ class SimulationEngine:
         self._resource_configs: dict[str, Resource] = {}
         self._runtime_resources: dict[str, simpy.Resource] = {}
         self.events: list[SimulationEvent] = []
+        self._has_run = False
 
     def add_resource(self, resource: Resource) -> None:
         """Register a resource before scheduling tasks."""
+        if self._has_run:
+            raise RuntimeError("Cannot add resources after the simulation has run")
+
         if resource.name in self._resource_configs:
             raise ValueError(f"Resource already exists: {resource.name}")
 
         self._resource_configs[resource.name] = resource
         self._runtime_resources[resource.name] = simpy.Resource(
             self.env, capacity=resource.capacity
-        )
+    )
 
     def schedule_service(
         self,
@@ -48,6 +53,9 @@ class SimulationEngine:
         duration: float,
     ) -> None:
         """Schedule an entity to arrive and request a resource."""
+        if self._has_run:
+            raise RuntimeError("Cannot schedule services after the simulation has run")
+
         if not isinstance(entity_id, str) or not entity_id.strip():
             raise ValueError("entity_id must be a non-empty string")
 
@@ -106,6 +114,10 @@ class SimulationEngine:
             self._record(entity_id, "service_completed", resource_name)
 
     def run(self) -> list[SimulationEvent]:
-        """Run until all scheduled processes finish and return the event log."""
+        """Run the simulation once and return the event log."""
+        if self._has_run:
+            raise RuntimeError("Simulation engine has already run")
+
+        self._has_run = True
         self.env.run()
         return list(self.events)
