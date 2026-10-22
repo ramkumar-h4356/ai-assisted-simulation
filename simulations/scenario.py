@@ -1,18 +1,18 @@
-
 """Define and compare discrete-event simulation scenarios."""
-
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-
 from math import isfinite
 
-
 from simulations.engine import SimulationEngine
-from simulations.metrics import EntityMetrics, calculate_entity_metrics
+from simulations.metrics import (
+    EntityMetrics,
+    ResourceMetrics,
+    calculate_entity_metrics,
+    calculate_resource_metrics,
+)
 from simulations.resource import Resource
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,13 +84,13 @@ class ScenarioResult:
     entity_metrics: tuple[EntityMetrics, ...]
     average_waiting_time: float
     completion_time: float
+    resource_metrics: tuple[ResourceMetrics, ...]
 
 
 def run_scenario(scenario: Scenario) -> ScenarioResult:
-    """Run a scenario using the existing deterministic simulation engine."""
+    """Run a scenario and calculate its performance metrics."""
 
     engine = SimulationEngine()
-
     engine.add_resource(
         Resource(
             name=scenario.resource_name,
@@ -107,21 +107,26 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
         )
 
     events = engine.run()
-    metrics = calculate_entity_metrics(events)
+    entity_metrics = calculate_entity_metrics(events)
+    resource_metrics = calculate_resource_metrics(
+        events,
+        resource_capacities=engine.resource_capacities,
+    )
 
     average_waiting_time = sum(
-        item.waiting_time for item in metrics
-    ) / len(metrics)
+        item.waiting_time for item in entity_metrics
+    ) / len(entity_metrics)
 
     completion_time = max(
-        item.completion_time for item in metrics
+        item.completion_time for item in entity_metrics
     )
 
     return ScenarioResult(
         scenario_name=scenario.name,
-        entity_metrics=tuple(metrics),
+        entity_metrics=tuple(entity_metrics),
         average_waiting_time=average_waiting_time,
         completion_time=completion_time,
+        resource_metrics=tuple(resource_metrics),
     )
 
 

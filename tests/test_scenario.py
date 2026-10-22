@@ -91,6 +91,40 @@ class ScenarioTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     ServiceJob("A", 0, duration)
 
+    def test_scenario_reports_resource_utilization(self):
+        scenario = Scenario(
+            name="One machine",
+            resource_name="machine",
+            resource_capacity=1,
+            jobs=self.jobs,
+        )
+
+        result = run_scenario(scenario)
+
+        self.assertEqual(len(result.resource_metrics), 1)
+        self.assertEqual(
+            result.resource_metrics[0].resource_name,
+            "machine",
+        )
+        self.assertAlmostEqual(
+            result.resource_metrics[0].utilization,
+            100.0,
+        )
+
+    def test_more_capacity_reduces_utilization_per_capacity_unit(self):
+        scenario = Scenario(
+            name="Two machines",
+            resource_name="machine",
+            resource_capacity=2,
+            jobs=self.jobs,
+        )
+
+        result = run_scenario(scenario)
+
+        self.assertAlmostEqual(
+            result.resource_metrics[0].utilization,
+            100.0 * 10 / 12,
+        )
 
 
 if __name__ == "__main__":
