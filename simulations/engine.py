@@ -31,6 +31,14 @@ class SimulationEngine:
         self._has_run = False
         self._scheduled_entity_ids: set[str] = set()
 
+    @property
+    def resource_capacities(self) -> dict[str, int]:
+        """Return the configured capacity of each resource."""
+        return {
+            name: resource.capacity
+            for name, resource in self._resource_configs.items()
+        }
+
     def add_resource(self, resource: Resource) -> None:
         """Register a resource before scheduling tasks."""
         if self._has_run:

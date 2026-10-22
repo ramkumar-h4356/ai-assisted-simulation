@@ -260,6 +260,17 @@ class SimulationEngineTests(unittest.TestCase):
         )
 
         self.assertEqual(b_consultation_start, 5)
-    
+
+    def test_resource_capacities_returns_configured_capacities(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource("Doctor", capacity=1))
+        engine.add_resource(Resource("Counter", capacity=2))
+
+        self.assertEqual(
+            engine.resource_capacities,
+            {"Doctor": 1, "Counter": 2},
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

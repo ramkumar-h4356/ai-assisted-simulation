@@ -49,6 +49,7 @@ class ResourceMetrics:
     completed_services: int
     average_waiting_time: float
     average_service_time: float
+    utilization: float = 0.0
 
 def _group_stage_events(
     events: list[SimulationEvent],
@@ -191,19 +192,44 @@ def calculate_simulation_summary(
 
 def calculate_resource_metrics(
     events: list[SimulationEvent],
+    resource_capacities: dict[str, int] | None = None,
 ) -> list[ResourceMetrics]:
     """Calculate aggregated performance metrics for each resource."""
     stages = calculate_stage_metrics(events)
+
+    if not stages:
+        return []
+
+    simulation_start = min(stage.arrival_time for stage in stages)
+    simulation_end = max(stage.completion_time for stage in stages)
+    simulation_duration = simulation_end - simulation_start
 
     grouped: dict[str, list[StageMetrics]] = {}
 
     for stage in stages:
         grouped.setdefault(stage.resource_name, []).append(stage)
 
+    capacities = resource_capacities or {}
     results: list[ResourceMetrics] = []
 
     for resource_name, resource_stages in grouped.items():
         count = len(resource_stages)
+        total_service_time = sum(
+            stage.service_time for stage in resource_stages
+        )
+        capacity = capacities.get(resource_name, 1)
+
+        if isinstance(capacity, bool) or not isinstance(capacity, int):
+            raise TypeError("Resource capacities must be integers")
+        if capacity <= 0:
+            raise ValueError("Resource capacities must be positive")
+
+        available_capacity_time = simulation_duration * capacity
+        utilization = (
+            total_service_time / available_capacity_time * 100.0
+            if available_capacity_time > 0
+            else 0.0
+        )
 
         results.append(
             ResourceMetrics(
@@ -213,10 +239,8 @@ def calculate_resource_metrics(
                     sum(stage.waiting_time for stage in resource_stages)
                     / count
                 ),
-                average_service_time=(
-                    sum(stage.service_time for stage in resource_stages)
-                    / count
-                ),
+                average_service_time=total_service_time / count,
+                utilization=utilization,
             )
         )
 

@@ -174,6 +174,67 @@ class SimulationMetricsTests(unittest.TestCase):
 
         self.assertEqual(result, [])
 
+    def test_calculates_resource_utilization(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource(name="Doctor", capacity=1))
+
+        engine.schedule_service(
+            entity_id="A",
+            resource_name="Doctor",
+            arrival_time=0,
+            duration=4,
+        )
+        engine.schedule_service(
+            entity_id="B",
+            resource_name="Doctor",
+            arrival_time=0,
+            duration=2,
+        )
+
+        events = engine.run()
+        resource_metrics = calculate_resource_metrics(events)
+
+        doctor = resource_metrics[0]
+        self.assertEqual(doctor.resource_name, "Doctor")
+        self.assertAlmostEqual(doctor.utilization, 100.0)
+
+    def test_utilization_accounts_for_resource_capacity(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource(name="Counter", capacity=2))
+
+        engine.schedule_service(
+            entity_id="A",
+            resource_name="Counter",
+            arrival_time=0,
+            duration=4,
+        )
+
+        events = engine.run()
+        resource_metrics = calculate_resource_metrics(
+            events,
+            resource_capacities=engine.resource_capacities,
+        )
+
+        counter = resource_metrics[0]
+        self.assertAlmostEqual(counter.utilization, 50.0)
+
+    def test_zero_duration_service_has_zero_utilization(self):
+        engine = SimulationEngine()
+        engine.add_resource(Resource(name="Machine", capacity=1))
+
+        engine.schedule_service(
+            entity_id="A",
+            resource_name="Machine",
+            arrival_time=0,
+            duration=0,
+        )
+
+        events = engine.run()
+        resource_metrics = calculate_resource_metrics(events)
+
+        machine = resource_metrics[0]
+        self.assertAlmostEqual(machine.utilization, 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
