@@ -1,13 +1,13 @@
-
-from asyncio import events
 import unittest
 
 from simulations.engine import SimulationEngine, SimulationEvent
 from simulations.metrics import (
+    ResourceMetrics,
     calculate_entity_metrics,
     calculate_resource_metrics,
     calculate_simulation_summary,
     calculate_stage_metrics,
+    identify_potential_bottlenecks,
 )
 from simulations.resource import Resource
 
@@ -58,14 +58,12 @@ class SimulationMetricsTests(unittest.TestCase):
         ]
 
         entity = calculate_entity_metrics(events)[0]
+
         self.assertEqual(entity.arrival_time, 0)
         self.assertEqual(entity.completion_time, 8)
         self.assertEqual(entity.waiting_time, 3)
         self.assertEqual(entity.service_time, 5)
         self.assertEqual(entity.time_in_system, 8)
-
-
-
 
         stages = calculate_stage_metrics(events)
 
@@ -96,14 +94,14 @@ class SimulationMetricsTests(unittest.TestCase):
         self.assertEqual(summary.average_service_time, 5)
         self.assertEqual(summary.average_time_in_system, 8)
 
-
     def test_empty_simulation_summary(self):
-        summary =calculate_simulation_summary([])
+        summary = calculate_simulation_summary([])
 
         self.assertEqual(summary.completed_entities, 0)
         self.assertEqual(summary.average_waiting_time, 0.0)
         self.assertEqual(summary.average_service_time, 0.0)
         self.assertEqual(summary.average_time_in_system, 0.0)
+
     def test_calculates_resource_metrics(self):
         events = [
             SimulationEvent(0, "A", "arrived", "registration"),
@@ -129,5 +127,53 @@ class SimulationMetricsTests(unittest.TestCase):
         self.assertEqual(consultation.completed_services, 1)
         self.assertEqual(consultation.average_waiting_time, 3)
         self.assertEqual(consultation.average_service_time, 3)
+
+    def test_identify_potential_bottlenecks(self):
+        resource_metrics = [
+            ResourceMetrics("registration", 1, 0, 2),
+            ResourceMetrics("consultation", 1, 3, 3),
+        ]
+
+        bottlenecks = identify_potential_bottlenecks(resource_metrics)
+
+        self.assertEqual(len(bottlenecks), 1)
+        self.assertEqual(bottlenecks[0].resource_name, "consultation")
+
+    def test_identifies_resource_with_highest_waiting_time(self):
+        resources = [
+            ResourceMetrics("registration", 10, 2.0, 3.0),
+            ResourceMetrics("consultation", 8, 12.0, 8.0),
+            ResourceMetrics("pharmacy", 10, 4.0, 2.0),
+        ]
+
+        result = identify_potential_bottlenecks(resources)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].resource_name, "consultation")
+
+    def test_returns_all_resources_tied_for_highest_waiting_time(self):
+        resources = [
+            ResourceMetrics("registration", 10, 5.0, 3.0),
+            ResourceMetrics("consultation", 8, 5.0, 8.0),
+        ]
+
+        result = identify_potential_bottlenecks(resources)
+
+        self.assertEqual(
+            [item.resource_name for item in result],
+            ["consultation", "registration"],
+        )
+
+    def test_returns_empty_list_when_no_resource_has_waiting_time(self):
+        resources = [
+            ResourceMetrics("registration", 10, 0.0, 3.0),
+            ResourceMetrics("consultation", 8, 0.0, 8.0),
+        ]
+
+        result = identify_potential_bottlenecks(resources)
+
+        self.assertEqual(result, [])
+
+
 if __name__ == "__main__":
     unittest.main()

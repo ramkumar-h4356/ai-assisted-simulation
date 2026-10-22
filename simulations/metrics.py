@@ -221,3 +221,30 @@ def calculate_resource_metrics(
         )
 
     return sorted(results, key=lambda result: result.resource_name)
+
+def identify_potential_bottlenecks(
+    resource_metrics: list[ResourceMetrics],
+) -> list[ResourceMetrics]:
+    """Return resources with the highest positive average waiting time."""
+
+    if not resource_metrics:
+        return []
+
+    highest_waiting_time = max(
+        item.average_waiting_time
+        for item in resource_metrics
+    )
+
+    if highest_waiting_time <= 0:
+        return []
+
+    bottlenecks = [
+        item
+        for item in resource_metrics
+        if item.average_waiting_time == highest_waiting_time
+    ]
+
+    return sorted(
+        bottlenecks,
+        key=lambda item: item.resource_name,
+    )
