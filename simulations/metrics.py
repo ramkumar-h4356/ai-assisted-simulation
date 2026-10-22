@@ -41,7 +41,14 @@ class SimulationSummary:
     average_service_time: float
     average_time_in_system: float
 
+@dataclass(frozen=True, slots=True)
+class ResourceMetrics:
+    """Performance measurements for a resource."""
 
+    resource_name: str
+    completed_services: int
+    average_waiting_time: float
+    average_service_time: float
 
 def _group_stage_events(
     events: list[SimulationEvent],
@@ -181,3 +188,36 @@ def calculate_simulation_summary(
             sum(entity.time_in_system for entity in entities) / count
         ),
     )
+
+def calculate_resource_metrics(
+    events: list[SimulationEvent],
+) -> list[ResourceMetrics]:
+    """Calculate aggregated performance metrics for each resource."""
+    stages = calculate_stage_metrics(events)
+
+    grouped: dict[str, list[StageMetrics]] = {}
+
+    for stage in stages:
+        grouped.setdefault(stage.resource_name, []).append(stage)
+
+    results: list[ResourceMetrics] = []
+
+    for resource_name, resource_stages in grouped.items():
+        count = len(resource_stages)
+
+        results.append(
+            ResourceMetrics(
+                resource_name=resource_name,
+                completed_services=count,
+                average_waiting_time=(
+                    sum(stage.waiting_time for stage in resource_stages)
+                    / count
+                ),
+                average_service_time=(
+                    sum(stage.service_time for stage in resource_stages)
+                    / count
+                ),
+            )
+        )
+
+    return sorted(results, key=lambda result: result.resource_name)

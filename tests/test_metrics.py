@@ -5,6 +5,7 @@ import unittest
 from simulations.engine import SimulationEngine, SimulationEvent
 from simulations.metrics import (
     calculate_entity_metrics,
+    calculate_resource_metrics,
     calculate_simulation_summary,
     calculate_stage_metrics,
 )
@@ -64,12 +65,7 @@ class SimulationMetricsTests(unittest.TestCase):
         self.assertEqual(entity.time_in_system, 8)
 
 
-        entity = calculate_entity_metrics(events)[0]
-        self.assertEqual(entity.arrival_time, 0)
-        self.assertEqual(entity.completion_time, 8)
-        self.assertEqual(entity.waiting_time, 3)
-        self.assertEqual(entity.service_time, 5)
-        self.assertEqual(entity.time_in_system, 8)
+
 
         stages = calculate_stage_metrics(events)
 
@@ -108,5 +104,30 @@ class SimulationMetricsTests(unittest.TestCase):
         self.assertEqual(summary.average_waiting_time, 0.0)
         self.assertEqual(summary.average_service_time, 0.0)
         self.assertEqual(summary.average_time_in_system, 0.0)
+    def test_calculates_resource_metrics(self):
+        events = [
+            SimulationEvent(0, "A", "arrived", "registration"),
+            SimulationEvent(0, "A", "service_started", "registration"),
+            SimulationEvent(2, "A", "service_completed", "registration"),
+            SimulationEvent(2, "A", "arrived", "consultation"),
+            SimulationEvent(5, "A", "service_started", "consultation"),
+            SimulationEvent(8, "A", "service_completed", "consultation"),
+        ]
+
+        resources = calculate_resource_metrics(events)
+
+        self.assertEqual(len(resources), 2)
+
+        registration = resources[1]
+        self.assertEqual(registration.resource_name, "registration")
+        self.assertEqual(registration.completed_services, 1)
+        self.assertEqual(registration.average_waiting_time, 0)
+        self.assertEqual(registration.average_service_time, 2)
+
+        consultation = resources[0]
+        self.assertEqual(consultation.resource_name, "consultation")
+        self.assertEqual(consultation.completed_services, 1)
+        self.assertEqual(consultation.average_waiting_time, 3)
+        self.assertEqual(consultation.average_service_time, 3)
 if __name__ == "__main__":
     unittest.main()
