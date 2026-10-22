@@ -3,7 +3,9 @@ import unittest
 
 from simulations.scenario import (
     Scenario,
+    ScenarioResource,
     ServiceJob,
+    ServiceStage,
     compare_scenarios,
     run_scenario,
 )
@@ -68,7 +70,7 @@ class ScenarioTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             Scenario("Invalid", "machine", 1, jobs)
-    
+
     def test_rejects_empty_resource_name(self):
         with self.assertRaises(ValueError):
             Scenario("Test", " ", 1, self.jobs)
@@ -125,6 +127,37 @@ class ScenarioTests(unittest.TestCase):
             result.resource_metrics[0].utilization,
             100.0 * 10 / 12,
         )
+
+    def test_job_visits_multiple_resources_in_sequence(self):
+        scenario = Scenario(
+            name="Hospital workflow",
+            resources=(
+                ScenarioResource("registration", 2),
+                ScenarioResource("doctor", 3),
+                ScenarioResource("pharmacy", 1),
+            ),
+            jobs=(
+                ServiceJob(
+                    entity_id="Patient-1",
+                    arrival_time=0,
+                    stages=(
+                        ServiceStage("registration", 5),
+                        ServiceStage("doctor", 15),
+                        ServiceStage("pharmacy", 3),
+                    ),
+                ),
+            ),
+        )
+
+        result = run_scenario(scenario)
+
+        self.assertEqual(result.completion_time, 23)
+        self.assertEqual(len(result.resource_metrics), 3)
+        self.assertEqual(
+            {metric.resource_name for metric in result.resource_metrics},
+            {"registration", "doctor", "pharmacy"},
+        )
+
 
 
 if __name__ == "__main__":
