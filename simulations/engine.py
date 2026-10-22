@@ -202,6 +202,7 @@ class SimulationEngine:
             yield self.env.timeout(duration)
             self._record(entity_id, "service_completed", resource_name)
 
+
     def _serve_route(
         self,
         entity_id: str,
@@ -211,18 +212,22 @@ class SimulationEngine:
         """Execute each stage of an entity's route in order."""
         yield self.env.timeout(arrival_time)
 
-        first_resource_name = stages[0][0]
-        self._record(entity_id, "arrived", first_resource_name)
-
         for resource_name, duration in stages:
+            # Record when the entity reaches each stage.
+            self._record(entity_id, "arrived", resource_name)
+
             resource = self._runtime_resources[resource_name]
 
             with resource.request() as request:
                 yield request
-                self._record(entity_id, "service_started", resource_name)
+                self._record(
+                    entity_id, "service_started", resource_name
+                )
 
                 yield self.env.timeout(duration)
-                self._record(entity_id, "service_completed", resource_name)
+                self._record(
+                    entity_id, "service_completed", resource_name
+                )
 
     def run(self) -> list[SimulationEvent]:
         """Run the simulation once and return the event log."""

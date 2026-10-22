@@ -16,7 +16,6 @@ class SimulationEngineTests(unittest.TestCase):
         engine.schedule_service("B", "checkout", 1, 2)
 
         events = engine.run()
-
         starts = [
             (event.entity_id, event.time)
             for event in events
@@ -39,7 +38,6 @@ class SimulationEngineTests(unittest.TestCase):
         engine.schedule_service("B", "doctors", 0, 2)
 
         events = engine.run()
-
         starts = [
             (event.entity_id, event.time)
             for event in events
@@ -64,7 +62,6 @@ class SimulationEngineTests(unittest.TestCase):
         engine.schedule_service("B", "machine", 2, 4)
 
         events = engine.run()
-
         start_times = {
             event.entity_id: event.time
             for event in events
@@ -81,7 +78,6 @@ class SimulationEngineTests(unittest.TestCase):
         engine.schedule_service("A", "machine", 0, 2)
 
         engine.run()
-
         with self.assertRaises(RuntimeError):
             engine.schedule_service("B", "machine", 3, 1)
 
@@ -91,7 +87,6 @@ class SimulationEngineTests(unittest.TestCase):
         engine.schedule_service("A", "machine", 0, 2)
 
         engine.run()
-
         with self.assertRaises(RuntimeError):
             engine.add_resource(Resource("another_machine", capacity=1))
     def test_running_engine_twice_is_rejected(self):
@@ -100,7 +95,6 @@ class SimulationEngineTests(unittest.TestCase):
         engine.schedule_service("A", "machine", 0, 2)
 
         engine.run()
-
         with self.assertRaises(RuntimeError):
             engine.run()
 
@@ -127,7 +121,6 @@ class SimulationEngineTests(unittest.TestCase):
         engine.schedule_service("B", "machine", 0, 1)
 
         events = engine.run()
-
         arrivals = [
             event for event in events
             if event.event_type == "arrived"
@@ -156,7 +149,6 @@ class SimulationEngineTests(unittest.TestCase):
         )
 
         events = engine.run()
-
         actual = [
             (event.event_type, event.resource_name, event.time)
             for event in events
@@ -164,13 +156,14 @@ class SimulationEngineTests(unittest.TestCase):
 
         self.assertEqual(
             actual,
-            [
-                ("arrived", "registration", 0),
-                ("service_started", "registration", 0),
-                ("service_completed", "registration", 2),
-                ("service_started", "consultation", 2),
-                ("service_completed", "consultation", 7),
-            ],
+                [
+                    ("arrived", "registration", 0),
+                    ("service_started", "registration", 0),
+                    ("service_completed", "registration", 2),
+                    ("arrived", "consultation", 2),
+                    ("service_started", "consultation", 2),
+                    ("service_completed", "consultation", 7),
+                ],
         ) 
 
     def test_empty_route_is_rejected(self):
@@ -258,8 +251,6 @@ class SimulationEngineTests(unittest.TestCase):
         )
 
         events = engine.run()
-        for event in events:
-            print(event)
         b_consultation_start = next(
             event.time
             for event in events
