@@ -1,1 +1,1 @@
-"""Tests for the AI-Assisted Simulation System."""
+"""Automated tests for the simulation platform."""

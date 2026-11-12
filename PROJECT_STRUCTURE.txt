@@ -1,0 +1,75 @@
+/mnt/data/simulator_real_reorganized/
+.env.example
+.gitignore
+ABM_MILESTONE1_REPORT.md
+ABM_MILESTONE2_REPORT.md
+MIGRATION_REPORT.md
+PROJECT_STRUCTURE.txt
+README.md
+main.py
+requirements-dev.txt
+requirements.txt
+scenarios/
+    .gitkeep
+scripts/
+    check_groq_connection.py
+simulations/
+    __init__.py
+    simulations/abm/
+        README.md
+        __init__.py
+        backend.py
+        engine.py
+        model.py
+        validation.py
+    simulations/core/
+        __init__.py
+        backend.py
+        registry.py
+        specification.py
+    simulations/data_driven/
+        README.md
+        __init__.py
+    simulations/des/
+        __init__.py
+        backend.py
+        compiler.py
+        interpreter.py
+        model.py
+        pipeline.py
+        processing.py
+        representation.py
+        runtime.py
+        schema.py
+        validation.py
+    simulations/mathematical/
+        README.md
+        __init__.py
+tests/
+    __init__.py
+    tests/abm/
+        __init__.py
+        test_backend.py
+        test_engine.py
+        test_model.py
+        test_validation.py
+    tests/core/
+        __init__.py
+        test_simulation_architecture.py
+    tests/des/
+        __init__.py
+        test_ai_interpreter.py
+        test_clarification_loop.py
+        test_engine.py
+        test_entity.py
+        test_metrics.py
+        test_model_schema.py
+        test_pipeline.py
+        test_pipeline_ir.py
+        test_requirements.py
+        test_resource.py
+        test_scenario.py
+        test_scenario_compiler.py
+        test_scenario_normalizer.py
+        test_scenario_understanding.py
+        test_simpy_backend.py

@@ -1,12 +1,9 @@
 
 """Run AI-generated simulations or compare resource capacities."""
 
-from simulations.pipeline import run_prompt
-from simulations.scenario import (
-    Scenario,
-    ServiceJob,
-    compare_scenarios,
-)
+from simulations.des.pipeline import run_prompt
+from simulations.des.model import Scenario, ServiceJob
+from simulations.des.backend import compare_scenarios
 
 
 def run_machine_comparison():
