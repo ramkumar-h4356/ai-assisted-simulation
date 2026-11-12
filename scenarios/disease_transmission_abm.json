@@ -1,0 +1,84 @@
+{
+  "name": "Small Disease Transmission Network",
+  "agents": [
+    {
+      "reference": "source_infected_person",
+      "agent_type": "person",
+      "state": "infected",
+      "attributes": {}
+    },
+    {
+      "reference": "person_a",
+      "agent_type": "person",
+      "state": "susceptible",
+      "attributes": {}
+    },
+    {
+      "reference": "person_b",
+      "agent_type": "person",
+      "state": "susceptible",
+      "attributes": {}
+    }
+  ],
+  "environment": {
+    "attributes": {}
+  },
+  "relationships": [
+    {
+      "source": "source_infected_person",
+      "target": "person_a",
+      "relation_type": "contact",
+      "directed": false
+    },
+    {
+      "source": "source_infected_person",
+      "target": "person_b",
+      "relation_type": "contact",
+      "directed": false
+    },
+    {
+      "source": "person_a",
+      "target": "person_b",
+      "relation_type": "contact",
+      "directed": false
+    }
+  ],
+  "behaviours": [
+    {
+      "rule_id": "infection_transmission",
+      "agent_type": "person",
+      "condition": {
+        "type": "all_of",
+        "conditions": [
+          {
+            "type": "agent_state_is",
+            "state": "susceptible"
+          },
+          {
+            "type": "related_agent_state_count",
+            "relation_type": "contact",
+            "state": "infected",
+            "operator": "gt",
+            "count": 0
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "set_state",
+          "state": "infected"
+        }
+      ],
+      "probability": 1.0
+    }
+  ],
+  "activation": {
+    "mode": "sequential",
+    "order": "declaration"
+  },
+  "termination": {
+    "type": "max_steps",
+    "value": 3
+  },
+  "random_seed": 42
+}
