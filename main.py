@@ -51,7 +51,8 @@ def run_machine_comparison():
 
 
 def run_ai_simulation():
-    """Generate and execute a simulation from a natural-language prompt."""
+    """Generate and execute a simulation with conversational clarification."""
+
     print("\n--- AI-Assisted Simulation ---")
     print("Describe a real-world process to simulate.")
     prompt = input("\nYour scenario: ").strip()
@@ -60,12 +61,75 @@ def run_ai_simulation():
         print("Please enter a scenario.")
         return
 
+    def collect_clarifications(questions):
+        print("\n--- Clarification Required ---")
+
+        for index, question in enumerate(questions, start=1):
+            print(f"\n{index}. {question.path}")
+            print(question.question)
+
+        print(
+            "\nAnswer as many questions as possible in one response. "
+            "You can also explain corrections to earlier information."
+        )
+
+        return input("\nYour clarification: ").strip()
+
+    def approve_defaults(defaults):
+        print("\n--- Proposed Defaults ---")
+
+        for item in defaults:
+            print(f"{item.path} = {item.value}")
+
+        answer = input(
+            "\nApply these defaults? (y/n): "
+        ).strip().lower()
+
+        return answer in {"y", "yes"}
+
     try:
-        result = run_prompt(prompt)
+        result = run_prompt(
+            prompt,
+            clarification_handler=collect_clarifications,
+            approve_defaults=approve_defaults,
+            max_clarification_rounds=3,
+        )
+
+        report = result.validation_report
+
+        if result.simulation_result is None:
+            print("\n--- Simulation Not Executed ---")
+            print(f"Readiness: {report.readiness.value}")
+
+            print("\n--- Remaining Findings ---")
+
+            for item in report.results:
+                if item.status.value != "satisfied":
+                    print(
+                        f"[{item.status.value.upper()}] "
+                        f"{item.path}: {item.message}"
+                    )
+
+            print(
+                "\nThe scenario still needs information or corrections."
+            )
+            return
+
+        simulation = result.simulation_result
 
         print("\n--- Generated Simulation Model ---")
-        print(f"Scenario: {result.simulation_result.scenario_name}")
+        print(f"Scenario: {simulation.scenario_name}")
 
+        print(
+            f"Clarification rounds: "
+            f"{len(result.clarification_history)}"
+        )
+
+        if result.default_resolution.applied:
+            print("\nApplied defaults:")
+
+            for item in result.default_resolution.applied:
+                print(f"  {item.path} = {item.value}")
 
         print("\nResource Statistics:")
         print("-" * 76)
@@ -78,7 +142,7 @@ def run_ai_simulation():
         )
         print("-" * 76)
 
-        for metrics in result.simulation_result.resource_metrics:
+        for metrics in simulation.resource_metrics:
             print(
                 f"{metrics.resource_name:<18}"
                 f"{metrics.completed_services:>12}"
@@ -89,14 +153,15 @@ def run_ai_simulation():
 
         print("-" * 76)
 
-
         print("\nJobs and stages:")
+
         for job in result.model_data["jobs"]:
             stages = " -> ".join(
                 f"{stage['resource_name']} "
                 f"({stage['service_duration']} time units)"
                 for stage in job["stages"]
             )
+
             print(
                 f"  {job['entity_id']}: "
                 f"arrival={job['arrival_time']}, "
@@ -106,15 +171,16 @@ def run_ai_simulation():
         print("\n--- Simulation Results ---")
         print(
             "Average waiting time: "
-            f"{result.simulation_result.average_waiting_time:.2f}"
+            f"{simulation.average_waiting_time:.2f}"
         )
         print(
             "Final completion time: "
-            f"{result.simulation_result.completion_time:.2f}"
+            f"{simulation.completion_time:.2f}"
         )
 
         print("\nJob details:")
-        for item in result.simulation_result.entity_metrics:
+
+        for item in simulation.entity_metrics:
             print(
                 f"  {item.entity_id}: "
                 f"wait={item.waiting_time:.2f}, "
@@ -122,18 +188,12 @@ def run_ai_simulation():
                 f"total={item.time_in_system:.2f}"
             )
 
-        print("\nResource statistics:")
-        for name, metrics in result.simulation_result.resource_metrics.items():
-            print(f"  {name}: {metrics}")
-
     except Exception as error:
         print(f"\nSimulation failed: {error}")
         print(
             "Check your Groq API key, internet connection, "
             "and scenario description, then try again."
         )
-
-
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
