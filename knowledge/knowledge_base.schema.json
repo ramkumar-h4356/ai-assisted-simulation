@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/knowledge/knowledge_base.schema.json",
+  "title": "Knowledge Base",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "documents"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "name": {"type": "string", "minLength": 1},
+    "description": {"type": "string"},
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "content", "reference"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "content": {"type": "string", "minLength": 1},
+          "reference": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "title"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "title": {"type": "string", "minLength": 1},
+              "reference_type": {"enum": ["article", "book", "dataset", "website", "report", "standard", "other"]},
+              "uri": {"type": ["string", "null"]},
+              "publisher": {"type": "string"},
+              "published_year": {"type": ["integer", "null"], "minimum": 1000, "maximum": 9999},
+              "notes": {"type": "string"}
+            }
+          },
+          "domains": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "keywords": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "concept_labels": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "authors": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "source_kind": {"enum": ["curated", "user_provided", "imported"]},
+          "language": {"type": "string", "minLength": 1},
+          "notes": {"type": "string"}
+        }
+      }
+    }
+  }
+}

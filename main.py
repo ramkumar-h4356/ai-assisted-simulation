@@ -277,6 +277,15 @@ def run_conceptual_model_inspection():
         print(f"\nConceptual model inspection failed: {error}")
 
 
+def run_knowledge_mapping():
+    """Search the local knowledge base and review mapping candidates."""
+    from knowledge.demo import run_interactive_workflow
+    try:
+        run_interactive_workflow()
+    except Exception as error:
+        print(f"\nKnowledge mapping workflow failed: {error}")
+
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
@@ -284,8 +293,9 @@ def main():
     print("2. Compare one machine vs. two machines")
     print("3. Generate an agent-based simulation using AI")
     print("4. Inspect and validate a conceptual idea model")
+    print("5. Search knowledge and review real-world mapping candidates")
 
-    choice = input("\nChoose an option (1-4): ").strip()
+    choice = input("\nChoose an option (1-5): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -295,8 +305,10 @@ def main():
         run_ai_agent_simulation()
     elif choice == "4":
         run_conceptual_model_inspection()
+    elif choice == "5":
+        run_knowledge_mapping()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 4.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 5.")
 
 
 if __name__ == "__main__":

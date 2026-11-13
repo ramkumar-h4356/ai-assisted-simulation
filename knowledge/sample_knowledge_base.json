@@ -1,0 +1,91 @@
+{
+  "id": "sample-social-systems-corpus",
+  "name": "Sample Social Systems Knowledge Corpus",
+  "description": "A small, curated demonstration corpus about cooperation, common-pool resources, social networks and collective-action problems. Summaries are original short paraphrases for retrieval practice, not substitutes for the cited works.",
+  "documents": [
+    {
+      "id": "ostrom-governing-commons-1990",
+      "title": "Governing the Commons: The Evolution of Institutions for Collective Action",
+      "content": "Elinor Ostrom examines common-pool resource governance using empirical cases of collective action. The work challenges the assumption that shared resources can only be governed through a single universal solution such as central state control or privatization. It is relevant to theories about resource users, locally developed rules, collective choice, monitoring, institutional diversity and self-organized governance. The conditions found in particular cases matter; this record does not imply that every community-managed resource succeeds.",
+      "reference": {
+        "id": "ref-ostrom-governing-commons-1990",
+        "title": "Governing the Commons: The Evolution of Institutions for Collective Action",
+        "reference_type": "book",
+        "uri": "https://doi.org/10.1017/CBO9780511807763",
+        "publisher": "Cambridge University Press",
+        "published_year": 1990,
+        "notes": "Publisher record. Consult the book for the full argument and case studies."
+      },
+      "domains": ["economics", "political science", "institutional analysis", "environmental governance"],
+      "keywords": ["common-pool resources", "collective action", "self-governance", "community rules", "resource management", "institutions", "monitoring", "collective choice"],
+      "concept_labels": ["common-pool resource governance", "self-organized collective action", "community-designed institutions"],
+      "authors": ["Elinor Ostrom"],
+      "source_kind": "curated",
+      "language": "en",
+      "notes": "Original paraphrase based on the publisher description and institutional teaching material. A retrieval lead, not a full literature review."
+    },
+    {
+      "id": "axelrod-evolution-cooperation-1984",
+      "title": "The Evolution of Cooperation",
+      "content": "Robert Axelrod studies how cooperation can emerge among self-interested actors through repeated interactions, including the iterated Prisoner's Dilemma. The work is useful when a theory proposes reciprocity, repeated exchange, strategic adaptation, incentives or cooperation without a central authority. Its results depend on the interaction structure and assumptions; they should not be generalized to every social setting without examination.",
+      "reference": {
+        "id": "ref-axelrod-evolution-cooperation-1984",
+        "title": "The Evolution of Cooperation",
+        "reference_type": "book",
+        "uri": "https://books.google.com/books/about/The_Evolution_of_Cooperation.html?id=NJZBCGbNs98C",
+        "publisher": "Basic Books",
+        "published_year": 1984,
+        "notes": "Bibliographic record identifies the original 1984 Basic Books edition."
+      },
+      "domains": ["game theory", "political science", "evolutionary biology", "social systems"],
+      "keywords": ["cooperation", "reciprocity", "repeated interaction", "iterated prisoner's dilemma", "self-interest", "incentives", "strategy", "no central authority"],
+      "concept_labels": ["reciprocity in repeated interactions", "emergence of cooperation", "strategic cooperation"],
+      "authors": ["Robert Axelrod"],
+      "source_kind": "curated",
+      "language": "en",
+      "notes": "Original short paraphrase informed by the book's publisher/library descriptions."
+    },
+    {
+      "id": "granovetter-strength-weak-ties-1973",
+      "title": "The Strength of Weak Ties",
+      "content": "Mark Granovetter's article develops the idea that weaker interpersonal ties can connect otherwise separated social circles and help explain the movement of information and influence across groups. It is relevant when a proposed theory includes networks, relationships of differing strengths, diffusion, bridging connections or community organization. A network analogy should preserve the differences between the proposed relationships and the article's sociological setting.",
+      "reference": {
+        "id": "ref-granovetter-strength-weak-ties-1973",
+        "title": "The Strength of Weak Ties",
+        "reference_type": "article",
+        "uri": "https://doi.org/10.1086/225469",
+        "publisher": "American Journal of Sociology",
+        "published_year": 1973,
+        "notes": "Journal article DOI and bibliographic metadata."
+      },
+      "domains": ["sociology", "social networks", "information diffusion"],
+      "keywords": ["weak ties", "social network", "network bridges", "information diffusion", "relationships", "community organization", "influence"],
+      "concept_labels": ["weak ties in social networks", "bridging relationships", "information diffusion across groups"],
+      "authors": ["Mark S. Granovetter"],
+      "source_kind": "curated",
+      "language": "en",
+      "notes": "Original short paraphrase based on the journal abstract."
+    },
+    {
+      "id": "hardin-tragedy-commons-1968",
+      "title": "The Tragedy of the Commons",
+      "content": "Garrett Hardin's 1968 article frames a collective-action problem around shared resources and competing individual incentives. It is a historically influential perspective for examining resource pressure, open access, incentives and possible overuse. It should be considered alongside empirical and institutional work on cases where communities develop arrangements to govern shared resources; the article is not a universal law for every commons.",
+      "reference": {
+        "id": "ref-hardin-tragedy-commons-1968",
+        "title": "The Tragedy of the Commons",
+        "reference_type": "article",
+        "uri": "https://doi.org/10.1126/science.162.3859.1243",
+        "publisher": "Science",
+        "published_year": 1968,
+        "notes": "Original article DOI. Read alongside later empirical research and critiques."
+      },
+      "domains": ["ecology", "economics", "collective action", "resource governance"],
+      "keywords": ["commons", "shared resources", "resource depletion", "open access", "individual incentives", "collective action", "resource pressure"],
+      "concept_labels": ["open-access shared-resource dilemma", "individual incentives in shared resources"],
+      "authors": ["Garrett Hardin"],
+      "source_kind": "curated",
+      "language": "en",
+      "notes": "Original short paraphrase based on the article's abstract and bibliographic record."
+    }
+  ]
+}

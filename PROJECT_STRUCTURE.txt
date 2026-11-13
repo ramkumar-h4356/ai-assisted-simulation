@@ -98,3 +98,25 @@ tests/conceptual/
   test_model_and_revision.py
   test_serialization.py
   test_validation.py
+
+
+Milestone 5 additions:
+knowledge/
+  __init__.py                   Public knowledge API
+  models.py                     Knowledge documents, corpus, retrieval hits and mapping candidates
+  repository.py                 Strict JSON persistence, immutable corpus changes and merge
+  tokenizer.py                  English-oriented lexical tokenizer
+  retrieval.py                  BM25-style search and filters
+  providers.py                  KnowledgeSearchProvider extension contract
+  mapping.py                    Explainable concept-to-source candidate generation
+  service.py                    Evidence integration and explicit mapping review
+  demo.py                       Interactive M5 workflow
+  sample_knowledge_base.json    Curated sample social-systems source corpus
+  knowledge_base.schema.json    JSON Schema for user-imported knowledge bases
+tests/knowledge/
+  test_models_repository.py     Corpus model and persistence tests
+  test_retrieval.py             Retrieval, ranking and filter tests
+  test_mapping_service.py       Candidate, provenance and review workflow tests
+M5_ARCHITECTURE.md              M5 design, boundaries and extension contracts
+MILESTONE5_REPORT.md            Implementation report and limitations
+M5_TEST_REPORT.md               Test and verification report

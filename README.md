@@ -5,6 +5,7 @@ An extensible Python platform for helping people formalize, inspect and explore 
 ## Current implementation
 
 - Paradigm-independent conceptual modeling core: immutable original idea capture, append-only revisions, concepts, properties, relationships, mechanisms, hypotheses, assumptions, constraints, evidence references, mapping claims, open questions, strict JSON persistence, and structural validation.
+- Knowledge retrieval and real-world mapping: local/imported knowledge corpora, BM25-style lexical retrieval, explained mapping candidates, source provenance, and explicit accept/reject decisions stored in new conceptual revisions.
 - Discrete-event simulation (DES) using SimPy.
 - AI-assisted DES interpretation and clarification using Groq.
 - Hierarchical DES representation, validation, documented defaults and compilation.
@@ -13,7 +14,7 @@ An extensible Python platform for helping people formalize, inspect and explore 
 
 ## Planned capabilities
 
-- Knowledge retrieval and real-world mapping assistance for conceptual models.
+- Conversational AI refinement and clarification over the conceptual and evidence layers.
 - AI-assisted conversational idea refinement and clarification.
 - Readiness assessment and translation from conceptual structures into supported simulation representations.
 - `simulations/mathematical`: Equation-to-Simulation using validated mathematical representations and numerical solvers.
@@ -25,6 +26,7 @@ These are separate model families that will reuse the common backend contracts w
 
 ```text
 conceptual/      Idea representation, provenance, revisions, JSON persistence and validation
+knowledge/       Knowledge documents, local corpus, retrieval, mapping candidates and review workflow
 simulations/
   core/          Shared specification and backend contracts
   des/           Discrete-event models, AI workflow, validation and execution
@@ -33,6 +35,7 @@ simulations/
   data_driven/   Dataset-to-Simulation (planned)
 tests/
   conceptual/    Conceptual model, validation, revision and serialization tests
+  knowledge/     Corpus persistence, retrieval, filters, mapping and review workflow tests
   core/          Shared architecture tests
   des/           Discrete-event tests
   abm/           ABM schema, pipeline, model, validation, engine and backend tests
@@ -60,3 +63,11 @@ Run the included conceptual example with `python -m conceptual.demo`, or choose 
 - Shared backend interfaces live in `simulations/core`.
 - Stochastic models use an explicit random seed for reproducible experiments.
 - Scientific credibility requires model verification, validation and uncertainty analysis; a successful run alone does not establish scientific correctness.
+
+## Knowledge retrieval and mapping (M5)
+
+The `knowledge/` package retrieves source records from a local JSON knowledge base and proposes possible correspondences for concepts in an `IdeaProject`. It includes a small curated seed corpus covering commons governance, cooperation, social networks and shared-resource dilemmas. Search is deterministic BM25-style lexical retrieval with field boosts and domain/source filters; relevance scores are ranking scores, not confidence or truth estimates.
+
+Mapping candidates include matched terms, a source reference and an explicit caution that the result is only a comparison lead. The default recorded status is `unreviewed`. A person must explicitly accept or reject the mapping, and each decision is appended as a new conceptual revision. Original idea text and earlier revisions remain unchanged.
+
+Run `python -m knowledge.demo` or choose option 5 from `python main.py`. See `knowledge/README.md`, `M5_ARCHITECTURE.md` and `MILESTONE5_REPORT.md` for the delivered scope, source-ingestion contract, limitations and test results.
