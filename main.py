@@ -1,13 +1,12 @@
 
 """Run AI-generated simulations or compare resource capacities."""
 
-from simulations.des.pipeline import run_prompt
-from simulations.des.model import Scenario, ServiceJob
-from simulations.des.backend import compare_scenarios
 
 
 def run_machine_comparison():
     """Compare the same workload using one machine and two machines."""
+    from simulations.des.model import Scenario, ServiceJob
+    from simulations.des.backend import compare_scenarios
     jobs = (
         ServiceJob("A", arrival_time=0, service_duration=6),
         ServiceJob("B", arrival_time=2, service_duration=4),
@@ -49,6 +48,7 @@ def run_machine_comparison():
 
 def run_ai_simulation():
     """Generate and execute a simulation with conversational clarification."""
+    from simulations.des.pipeline import run_prompt
 
     print("\n--- AI-Assisted Simulation ---")
     print("Describe a real-world process to simulate.")
@@ -191,20 +191,112 @@ def run_ai_simulation():
             "Check your Groq API key, internet connection, "
             "and scenario description, then try again."
         )
+
+def run_ai_agent_simulation():
+    """Generate, clarify, validate and execute an agent-based model."""
+    from simulations.abm.pipeline import run_agent_prompt
+    print("\n--- AI-Assisted Agent-Based Simulation ---")
+    print("Describe the agents, their initial states, relationships and behaviours.")
+    prompt = input("\nYour scenario: ").strip()
+
+    if not prompt:
+        print("Please enter a scenario.")
+        return
+
+    def collect_clarification(questions):
+        print("\n--- ABM Clarification Required ---")
+        for question in questions:
+            print(f"\n{question.path}")
+            print(question.question)
+        return input("\nYour clarification: ").strip()
+
+    try:
+        result = run_agent_prompt(
+            prompt,
+            clarification_handler=collect_clarification,
+            max_clarification_rounds=3,
+        )
+
+        if not result.is_ready:
+            print("\n--- ABM Model Not Executed ---")
+            for issue in result.validation_report.errors:
+                print(f"[{issue.code}] {issue.path}: {issue.message}")
+            print("\nNo simulation was run because the model is incomplete or invalid.")
+            return
+
+        simulation = result.simulation_result
+        model = result.agent_model
+        print("\n--- Validated ABM Model ---")
+        print(f"Model: {model.name}")
+        print(f"Agents: {len(model.agents)}")
+        print(f"Relationships: {len(model.relationships)}")
+        print(f"Behaviour rules: {len(model.behaviours)}")
+        print(f"Steps completed: {simulation.steps_completed}")
+        print(f"Random seed: {simulation.random_seed}")
+
+        print("\nInitial agents:")
+        raw_agents = result.model_data.get("agents", [])
+        for index, agent in enumerate(model.agents):
+            reference = raw_agents[index].get("reference", agent.identifier)
+            print(
+                f"  {reference} ({agent.identifier}): "
+                f"type={agent.agent_type}, state={agent.state}, "
+                f"attributes={dict(agent.attributes)}"
+            )
+
+        print("\nFinal state counts:")
+        for state, count in simulation.final_state_counts.items():
+            print(f"  {state}: {count}")
+
+        print("\nStep-by-step population history:")
+        for snapshot in simulation.history:
+            counts = {}
+            for agent in snapshot.agents:
+                counts[agent.state] = counts.get(agent.state, 0) + 1
+            summary = ", ".join(
+                f"{state}={count}" for state, count in sorted(counts.items())
+            )
+            print(f"  Step {snapshot.step}: {summary}")
+
+        print(f"\nRule evaluations recorded: {len(simulation.rule_evaluations)}")
+        print("Simulation completed successfully.")
+
+    except Exception as error:
+        print(f"\nAgent-based simulation failed: {error}")
+        print("Check your Groq API key, internet connection and scenario description.")
+
+
+
+def run_conceptual_model_inspection():
+    """Inspect and validate the included paradigm-independent idea model."""
+    from conceptual.demo import inspect_example
+
+    try:
+        inspect_example()
+    except Exception as error:
+        print(f"\nConceptual model inspection failed: {error}")
+
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
     print("1. Generate a simulation using AI")
     print("2. Compare one machine vs. two machines")
+    print("3. Generate an agent-based simulation using AI")
+    print("4. Inspect and validate a conceptual idea model")
 
-    choice = input("\nChoose an option (1 or 2): ").strip()
+    choice = input("\nChoose an option (1-4): ").strip()
 
     if choice == "1":
         run_ai_simulation()
     elif choice == "2":
         run_machine_comparison()
+    elif choice == "3":
+        run_ai_agent_simulation()
+    elif choice == "4":
+        run_conceptual_model_inspection()
     else:
-        print("Invalid choice. Please run the program again and choose 1 or 2.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 4.")
 
 
 if __name__ == "__main__":

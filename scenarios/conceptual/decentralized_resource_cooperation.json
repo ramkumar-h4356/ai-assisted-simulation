@@ -1,0 +1,213 @@
+{
+  "id": "idea-decentralized-resource-cooperation",
+  "title": "Decentralized community resource cooperation",
+  "original_statement": "I propose that a community may distribute shared resources through local cooperation between individuals rather than depending entirely on a central authority.",
+  "current_revision_id": "revision-2",
+  "revisions": [
+    {
+      "id": "revision-1",
+      "version": 1,
+      "created_at": "2026-11-13T00:00:00+00:00",
+      "change_summary": "Initial capture of the original idea.",
+      "working_statement": "I propose that a community may distribute shared resources through local cooperation between individuals rather than depending entirely on a central authority.",
+      "parent_revision_id": null,
+      "concepts": [],
+      "properties": [],
+      "relationships": [],
+      "mechanisms": [],
+      "hypotheses": [],
+      "assumptions": [],
+      "constraints": [],
+      "evidence_references": [],
+      "mappings": [],
+      "open_questions": []
+    },
+    {
+      "id": "revision-2",
+      "version": 2,
+      "created_at": "2026-11-13T00:05:00+00:00",
+      "change_summary": "Identify initial concepts, a real-world analogy, assumptions and unresolved operational questions.",
+      "working_statement": "A community may coordinate the allocation of finite shared resources through local cooperation between individuals, without relying entirely on a central authority. The conditions and rules governing cooperation remain to be defined.",
+      "parent_revision_id": "revision-1",
+      "concepts": [
+        {
+          "id": "community",
+          "name": "Community",
+          "kind": "entity",
+          "origin": "user_defined",
+          "definition": "A group of individuals participating in a shared resource arrangement.",
+          "status": "partial",
+          "source_note": ""
+        },
+        {
+          "id": "individual",
+          "name": "Individual",
+          "kind": "actor",
+          "origin": "user_defined",
+          "definition": "A participant who can contribute to and receive shared resources.",
+          "status": "partial",
+          "source_note": ""
+        },
+        {
+          "id": "shared-resource",
+          "name": "Shared resource pool",
+          "kind": "resource",
+          "origin": "real_world_mapped",
+          "definition": "A finite collection of resources available to the community.",
+          "status": "partial",
+          "source_note": "Mapped provisionally to common-pool resource arrangements."
+        },
+        {
+          "id": "trust",
+          "name": "Collective trust",
+          "kind": "abstract",
+          "origin": "user_defined",
+          "definition": "A proposed concept describing confidence between participants.",
+          "status": "partial",
+          "source_note": ""
+        },
+        {
+          "id": "local-coordination",
+          "name": "Local coordination",
+          "kind": "process",
+          "origin": "ai_proposed",
+          "definition": "A proposed way for participants to coordinate contributions and allocation.",
+          "status": "proposed",
+          "source_note": "Suggested during concept decomposition; requires user review."
+        }
+      ],
+      "properties": [
+        {
+          "id": "resource-availability",
+          "concept_id": "shared-resource",
+          "name": "Available quantity",
+          "data_type": "number",
+          "unit": "resource units",
+          "definition": "Quantity currently available in the shared pool.",
+          "status": "partial"
+        },
+        {
+          "id": "trust-level",
+          "concept_id": "trust",
+          "name": "Trust level",
+          "data_type": "unknown",
+          "unit": null,
+          "definition": "A conceptual property whose measurement is not yet specified.",
+          "status": "partial"
+        }
+      ],
+      "relationships": [
+        {
+          "id": "membership",
+          "source_concept_id": "individual",
+          "target_concept_id": "community",
+          "label": "participates in",
+          "description": "An individual participates in the community arrangement.",
+          "directed": true,
+          "status": "partial"
+        },
+        {
+          "id": "resource-contribution",
+          "source_concept_id": "individual",
+          "target_concept_id": "shared-resource",
+          "label": "contributes to",
+          "description": "An individual may contribute resources to the shared pool.",
+          "directed": true,
+          "status": "partial"
+        },
+        {
+          "id": "trust-cooperation",
+          "source_concept_id": "trust",
+          "target_concept_id": "local-coordination",
+          "label": "may influence",
+          "description": "Collective trust may influence local coordination.",
+          "directed": true,
+          "status": "proposed"
+        }
+      ],
+      "mechanisms": [
+        {
+          "id": "cooperative-allocation",
+          "name": "Cooperative resource allocation",
+          "description": "Participants coordinate local contributions and allocation decisions.",
+          "input_concept_ids": [
+            "individual",
+            "shared-resource",
+            "trust"
+          ],
+          "output_concept_ids": [
+            "shared-resource",
+            "community"
+          ],
+          "trigger_description": "A participant requests or contributes resources.",
+          "effect_description": "The community's allocation state may change.",
+          "operational_definition": "",
+          "status": "partial"
+        }
+      ],
+      "hypotheses": [
+        {
+          "id": "scarcity-cooperation",
+          "statement": "Under some conditions, resource scarcity may increase cooperation between participants.",
+          "scope": "The proposed community resource-sharing system.",
+          "evidence_reference_ids": [],
+          "status": "untested"
+        }
+      ],
+      "assumptions": [
+        {
+          "id": "participants-observe",
+          "statement": "Participants can observe at least some information about shared resource availability.",
+          "scope": "Initial conceptual model",
+          "rationale": "This assumption is needed to reason about local allocation decisions."
+        }
+      ],
+      "constraints": [
+        {
+          "id": "finite-resources",
+          "statement": "The shared resource pool is finite at any given time.",
+          "scope": "Resource allocation",
+          "rationale": "The theory concerns allocation under resource limits."
+        }
+      ],
+      "evidence_references": [],
+      "mappings": [
+        {
+          "id": "common-pool-analogy",
+          "source_concept_id": "shared-resource",
+          "target_label": "Common-pool resource arrangements",
+          "mapping_type": "analogous",
+          "rationale": "This is a candidate analogy for thinking about shared resources; it is not evidence that the proposed theory works.",
+          "target_description": "Real-world arrangements in which multiple participants draw on a shared resource system.",
+          "evidence_reference_ids": [],
+          "review_status": "unreviewed"
+        }
+      ],
+      "open_questions": [
+        {
+          "id": "define-trust",
+          "question": "How should collective trust be represented or measured?",
+          "related_element_ids": [
+            "trust",
+            "trust-level",
+            "cooperative-allocation"
+          ],
+          "blocking": true,
+          "status": "open",
+          "resolution": ""
+        },
+        {
+          "id": "allocation-rule",
+          "question": "What specific rule determines how resources are allocated when requests exceed availability?",
+          "related_element_ids": [
+            "shared-resource",
+            "cooperative-allocation"
+          ],
+          "blocking": true,
+          "status": "open",
+          "resolution": ""
+        }
+      ]
+    }
+  ]
+}

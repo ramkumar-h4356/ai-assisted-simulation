@@ -3,6 +3,7 @@
 .gitignore
 ABM_MILESTONE1_REPORT.md
 ABM_MILESTONE2_REPORT.md
+ABM_MILESTONE3_REPORT.md
 MIGRATION_REPORT.md
 PROJECT_STRUCTURE.txt
 README.md
@@ -10,6 +11,7 @@ main.py
 requirements-dev.txt
 requirements.txt
 scenarios/
+    disease_transmission_abm.json
     .gitkeep
 scripts/
     check_groq_connection.py
@@ -20,7 +22,10 @@ simulations/
         __init__.py
         backend.py
         engine.py
+        interpreter.py
         model.py
+        pipeline.py
+        schema.py
         validation.py
     simulations/core/
         __init__.py
@@ -51,7 +56,10 @@ tests/
         __init__.py
         test_backend.py
         test_engine.py
+        test_interpreter.py
         test_model.py
+        test_pipeline.py
+        test_schema.py
         test_validation.py
     tests/core/
         __init__.py
@@ -73,3 +81,20 @@ tests/
         test_scenario_normalizer.py
         test_scenario_understanding.py
         test_simpy_backend.py
+
+
+Milestone 4 additions:
+conceptual/
+  __init__.py
+  model.py          Immutable concepts, mechanisms, hypotheses and project revisions
+  revision.py       Initial-project and append-only revision helpers
+  serialization.py  Strict JSON serialization and persistence
+  validation.py     Reference integrity, revision-chain and readiness checks
+  demo.py           Example project inspection CLI
+  README.md         Conceptual layer API and scope
+scenarios/conceptual/
+  decentralized_resource_cooperation.json
+tests/conceptual/
+  test_model_and_revision.py
+  test_serialization.py
+  test_validation.py
