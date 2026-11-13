@@ -120,3 +120,24 @@ tests/knowledge/
 M5_ARCHITECTURE.md              M5 design, boundaries and extension contracts
 MILESTONE5_REPORT.md            Implementation report and limitations
 M5_TEST_REPORT.md               Test and verification report
+
+idea_assistant/ - M6 AI-assisted idea interpretation, clarification, provenance and session persistence
+tests/idea_assistant/ - offline M6 parser, workflow, provenance and serialization tests
+
+
+Milestone 6 additions:
+idea_assistant/
+  __init__.py       Public M6 interpreter, service, schema and session API
+  models.py         Draft, question, clarification, retrieval context and session records
+  prompts.py        Evidence-aware JSON interpretation and refinement prompt
+  interpreter.py    Pluggable interpreter protocol and lazy Groq adapter
+  schema.py         Strict structured-response parser and cross-reference validation
+  service.py        Retrieval context, bounded clarification and M4 revision integration
+  session.py        Clarification audit JSON persistence
+  README.md         M6 use, provenance semantics and scope boundaries
+tests/idea_assistant/
+  helpers.py        Reusable deterministic interpreter payloads
+  test_schema.py   Strict schema and cross-reference checks
+  test_service.py  Clarification, retrieval, provenance and persistence checks
+M6_ARCHITECTURE.md  Dependency direction, workflow and epistemic boundaries
+M6_TEST_REPORT.md   Test results and environment limitations

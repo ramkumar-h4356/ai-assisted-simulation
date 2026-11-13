@@ -12,7 +12,7 @@ from conceptual.model import (
     Assumption, Concept, ConceptKind, ConceptOrigin, Constraint, DefinitionStatus,
     EvidenceReference, Hypothesis, HypothesisStatus, IdeaProject, IdeaRevision,
     MappingClaim, MappingType, Mechanism, OpenQuestion, Property, PropertyType,
-    QuestionStatus, ReferenceType, Relationship, ReviewStatus,
+    QuestionStatus, ReferenceType, Relationship, ReviewStatus, ProvenanceRecord, ProvenanceKind,
 )
 
 T = TypeVar("T")
@@ -23,6 +23,7 @@ class IdeaSerializationError(ValueError):
 
 
 _ENUM_FIELDS = {
+    ProvenanceRecord: {"kind": ProvenanceKind},
     Concept: {"kind": ConceptKind, "origin": ConceptOrigin, "status": DefinitionStatus},
     Property: {"data_type": PropertyType, "status": DefinitionStatus},
     Relationship: {"status": DefinitionStatus},
@@ -39,7 +40,7 @@ _TUPLE_FIELDS = {
     OpenQuestion: {"related_element_ids"},
     IdeaRevision: {
         "concepts", "properties", "relationships", "mechanisms", "hypotheses",
-        "assumptions", "constraints", "evidence_references", "mappings", "open_questions",
+        "assumptions", "constraints", "evidence_references", "mappings", "open_questions", "provenance_records",
     },
     IdeaProject: {"revisions"},
 }
@@ -55,6 +56,7 @@ _NESTED_FIELDS = {
         "evidence_references": EvidenceReference,
         "mappings": MappingClaim,
         "open_questions": OpenQuestion,
+        "provenance_records": ProvenanceRecord,
     },
     IdeaProject: {"revisions": IdeaRevision},
 }

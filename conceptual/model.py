@@ -79,6 +79,13 @@ class QuestionStatus(str, Enum):
     RESOLVED = "resolved"
 
 
+class ProvenanceKind(str, Enum):
+    USER_EXPLICIT = "user_explicit"
+    AI_INFERRED = "ai_inferred"
+    AI_SUGGESTED = "ai_suggested"
+    KNOWLEDGE_RETRIEVED = "knowledge_retrieved"
+
+
 def _text(value: object, name: str, *, allow_empty: bool = False) -> None:
     if not isinstance(value, str):
         raise TypeError(f"{name} must be a string")
@@ -296,6 +303,25 @@ class OpenQuestion:
 
 
 @dataclass(frozen=True, slots=True)
+class ProvenanceRecord:
+    """Trace why a conceptual element exists and which input informed it."""
+
+    id: str
+    element_id: str
+    kind: ProvenanceKind
+    source_label: str = ""
+    source_excerpt: str = ""
+    note: str = ""
+
+    def __post_init__(self) -> None:
+        for name in ("id", "element_id"):
+            _text(getattr(self, name), f"provenance {name}")
+        for name in ("source_label", "source_excerpt", "note"):
+            _text(getattr(self, name), f"provenance {name}", allow_empty=True)
+        _enum(self.kind, ProvenanceKind, "provenance kind")
+
+
+@dataclass(frozen=True, slots=True)
 class IdeaRevision:
     """A complete, immutable snapshot of the conceptual model at one revision."""
 
@@ -315,6 +341,7 @@ class IdeaRevision:
     evidence_references: tuple[EvidenceReference, ...] = ()
     mappings: tuple[MappingClaim, ...] = ()
     open_questions: tuple[OpenQuestion, ...] = ()
+    provenance_records: tuple[ProvenanceRecord, ...] = ()
 
     def __post_init__(self) -> None:
         _text(self.id, "revision id")
@@ -330,6 +357,7 @@ class IdeaRevision:
             "mechanisms": Mechanism, "hypotheses": Hypothesis, "assumptions": Assumption,
             "constraints": Constraint, "evidence_references": EvidenceReference,
             "mappings": MappingClaim, "open_questions": OpenQuestion,
+            "provenance_records": ProvenanceRecord,
         }
         for name, expected_type in expected.items():
             object.__setattr__(self, name, _object_tuple(getattr(self, name), expected_type, name))

@@ -175,6 +175,7 @@ def _revision_element_ids(revision) -> set[str]:
     group_names = (
         "concepts", "properties", "relationships", "mechanisms", "hypotheses",
         "assumptions", "constraints", "evidence_references", "mappings", "open_questions",
+        "provenance_records",
     )
     return {item.id for name in group_names for item in getattr(revision, name)}
 

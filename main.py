@@ -286,6 +286,112 @@ def run_knowledge_mapping():
         print(f"\nKnowledge mapping workflow failed: {error}")
 
 
+
+def run_ai_idea_formalization():
+    """Capture a novel idea, clarify its meaning and save a traceable M6 draft."""
+    from pathlib import Path
+    import re
+
+    from conceptual import save_idea_project
+    from idea_assistant import GroqIdeaInterpreter, IdeaAssistantService, save_session
+    from knowledge import load_knowledge_base
+
+    root = Path(__file__).resolve().parent
+    corpus_path = root / "knowledge" / "sample_knowledge_base.json"
+    knowledge_base = load_knowledge_base(corpus_path) if corpus_path.exists() else None
+
+    print("\n--- M6: AI-Assisted Idea Interpretation and Clarification ---")
+    print("Describe your idea, including new concepts that may have no real-world equivalent.")
+    print("The system will formalize a draft; it will not judge whether the idea is true or run a simulation.")
+    request = input("\nYour idea: ").strip()
+    if not request:
+        print("Please enter an idea.")
+        return
+
+    def collect_answers(questions):
+        print("\n--- Clarification questions ---")
+        answers = {}
+        for index, question in enumerate(questions, start=1):
+            print(f"\n{index}. [{question.priority.upper()}] {question.question}")
+            if question.reason:
+                print(f"   Why it matters: {question.reason}")
+            answer = input("   Your answer (Enter to leave open): ").strip()
+            if answer:
+                answers[question.id] = answer
+        return answers
+
+    try:
+        interpreter = GroqIdeaInterpreter()
+        service = IdeaAssistantService(interpreter, knowledge_base=knowledge_base)
+        result = service.build(
+            request,
+            clarification_handler=collect_answers,
+            max_clarification_rounds=3,
+            max_questions_per_round=3,
+        )
+    except Exception as error:
+        print(f"\nIdea interpretation failed: {error}")
+        print("Check the Groq API key, connection and the idea description, then try again.")
+        return
+
+    revision = result.project.current_revision
+    print("\n--- Interpreted Idea ---")
+    print(f"Title: {result.project.title}")
+    print(f"Working statement: {revision.working_statement}")
+    if result.draft.summary:
+        print(f"Summary: {result.draft.summary}")
+    print("\n--- Conceptual elements ---")
+    for group_name in ("concepts", "properties", "relationships", "mechanisms", "hypotheses", "assumptions", "constraints"):
+        print(f"{group_name.capitalize()}: {len(getattr(revision, group_name))}")
+    print(f"Unresolved questions: {len(revision.open_questions)}")
+    print(f"Clarification answers recorded: {len(result.session.clarification_history)}")
+
+    if revision.concepts:
+        print("\nConcepts and origin:")
+        provenance_by_element = {item.element_id: item for item in revision.provenance_records}
+        for concept in revision.concepts:
+            record = provenance_by_element.get(concept.id)
+            label = record.kind.value if record else concept.origin.value
+            print(f"  {concept.name}: {label} — {concept.definition or 'definition still open'}")
+
+    if result.session.retrieved_context:
+        print("\nLocal knowledge search leads (lexical relevance only, not confidence or proof):")
+        for item in result.session.retrieved_context:
+            print(f"  {item.title} | matched: {', '.join(item.matched_terms)}")
+
+    if result.draft.uncertainties:
+        print("\nRemaining uncertainties:")
+        for item in result.draft.uncertainties:
+            print(f"  - {item}")
+    if revision.open_questions:
+        print("\nOpen questions retained in the project:")
+        for item in revision.open_questions:
+            print(f"  - {item.question}")
+
+    print(f"\nConceptual validation: {result.validation_report.readiness.value}")
+    for issue in result.validation_report.warnings:
+        print(f"  [warning] {issue.path}: {issue.message}")
+    for issue in result.validation_report.errors:
+        print(f"  [error] {issue.path}: {issue.message}")
+
+    output_dir = root / "outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stem = re.sub(r"[^a-z0-9_-]+", "_", result.project.id.casefold()).strip("_") or "idea"
+    project_path = output_dir / f"{stem}_m6_idea.json"
+    session_path = output_dir / f"{stem}_m6_session.json"
+    version = 2
+    while project_path.exists() or session_path.exists():
+        project_path = output_dir / f"{stem}_m6_idea_v{version}.json"
+        session_path = output_dir / f"{stem}_m6_session_v{version}.json"
+        version += 1
+    save_idea_project(result.project, project_path)
+    save_session(result.session, session_path)
+    print("\nSaved the conceptual project and clarification audit trail:")
+    print(f"  Project: {project_path}")
+    print(f"  Session: {session_path}")
+    print("The original idea remains unchanged. AI-generated elements remain visibly attributed and require review.")
+
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
@@ -294,8 +400,9 @@ def main():
     print("3. Generate an agent-based simulation using AI")
     print("4. Inspect and validate a conceptual idea model")
     print("5. Search knowledge and review real-world mapping candidates")
+    print("6. Interpret and formalize a new idea with AI")
 
-    choice = input("\nChoose an option (1-5): ").strip()
+    choice = input("\nChoose an option (1-6): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -307,8 +414,10 @@ def main():
         run_conceptual_model_inspection()
     elif choice == "5":
         run_knowledge_mapping()
+    elif choice == "6":
+        run_ai_idea_formalization()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 5.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 6.")
 
 
 if __name__ == "__main__":

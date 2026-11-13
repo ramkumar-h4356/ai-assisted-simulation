@@ -79,7 +79,7 @@ def revise_idea_project(
     allowed = {
         "concepts", "properties", "relationships", "mechanisms", "hypotheses",
         "assumptions", "constraints", "evidence_references", "mappings",
-        "open_questions",
+        "open_questions", "provenance_records",
     }
     if not isinstance(project, IdeaProject):
         raise TypeError("project must be an IdeaProject")

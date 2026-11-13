@@ -120,6 +120,7 @@ def _validate_revision(revision: IdeaRevision, path: str, issues: list[Validatio
         "evidence_references": revision.evidence_references,
         "mappings": revision.mappings,
         "open_questions": revision.open_questions,
+        "provenance_records": revision.provenance_records,
     }
     global_ids: set[str] = set()
     group_ids: dict[str, set[str]] = {}
@@ -208,7 +209,16 @@ def _validate_revision(revision: IdeaRevision, path: str, issues: list[Validatio
         if mapping.review_status is ReviewStatus.ACCEPTED and mapping.mapping_type in {MappingType.EQUIVALENT, MappingType.EVIDENCE_SUPPORTED, MappingType.CONTRADICTED_BY} and not mapping.evidence_reference_ids:
             _add(issues, item_path, "ACCEPTED_MAPPING_WITHOUT_EVIDENCE", "An accepted equivalence/evidence mapping should include at least one supporting reference.", IssueSeverity.WARNING)
 
-    known_element_ids = global_ids
+    known_element_ids = set().union(*(values for name, values in group_ids.items() if name != "provenance_records"))
+    provenance_ids: set[str] = set()
+    for index, record in enumerate(revision.provenance_records):
+        item_path = f"{path}.provenance_records[{index}]"
+        if record.id in provenance_ids:
+            _add(issues, f"{item_path}.id", "DUPLICATE_PROVENANCE_ID", f"Duplicate provenance ID {record.id!r}.")
+        provenance_ids.add(record.id)
+        if record.element_id not in known_element_ids:
+            _add(issues, f"{item_path}.element_id", "UNKNOWN_PROVENANCE_ELEMENT", f"Unknown element {record.element_id!r}.")
+
     for index, question in enumerate(revision.open_questions):
         item_path = f"{path}.open_questions[{index}]"
         if not question.question.strip():
