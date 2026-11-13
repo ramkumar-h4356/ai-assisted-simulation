@@ -1083,8 +1083,10 @@ def main():
     print("10. Inspect a saved experiment result")
     print("11. Design and run a parameter sweep; compare M9 results")
     print("12. Inspect a saved M10 comparative analysis")
+    print("13. Run M11 sensitivity, uncertainty and robustness analysis")
+    print("14. Inspect a saved M11 uncertainty report")
 
-    choice = input("\nChoose an option (1-12): ").strip()
+    choice = input("\nChoose an option (1-14): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -1110,8 +1112,236 @@ def main():
         run_parameter_sweep_workflow()
     elif choice == "12":
         inspect_analysis_report()
+    elif choice == "13":
+        run_uncertainty_analysis_workflow()
+    elif choice == "14":
+        inspect_uncertainty_report()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 12.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 14.")
+
+
+
+def run_uncertainty_analysis_workflow():
+    """Sample uncertain inputs, execute through M9, and produce an M11 report."""
+    from pathlib import Path
+    from compilation import load_artifact
+    from execution import save_result
+    from uncertainty import (
+        export_summary_csv, load_plan, run_uncertainty_analysis, save_report,
+    )
+
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs"
+    artifact_candidates = sorted(
+        output_dir.glob("*_m8_*_specification*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+
+    print("\n--- M11: Sensitivity, Uncertainty and Robustness Analysis ---")
+    if artifact_candidates:
+        print("Recent M8 artifact candidates:")
+        for index, candidate in enumerate(artifact_candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nArtifact number or M8 artifact JSON path: ").strip().strip('"')
+    if not selection:
+        print("No artifact selected.")
+        return
+    if selection.isdigit() and artifact_candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(artifact_candidates)):
+            print("Invalid artifact number.")
+            return
+        artifact_path = artifact_candidates[index - 1]
+    else:
+        artifact_path = Path(selection).expanduser()
+        if not artifact_path.is_absolute():
+            artifact_path = (Path.cwd() / artifact_path).resolve()
+
+    try:
+        artifact = load_artifact(artifact_path)
+    except Exception as error:
+        print(f"Could not load or verify the M8 artifact: {error}")
+        return
+
+    print(f"\nProject: {artifact.project_title}")
+    print(f"Revision: {artifact.revision_id} (v{artifact.revision_version})")
+    print(f"Paradigm: {artifact.paradigm.value} | Backend: {artifact.backend_name}")
+    print("Only numeric M8 fields explicitly declared as user_parameter can be sampled.")
+
+    plan_path_text = input("Path to M11 uncertainty-plan JSON: ").strip().strip('"')
+    if not plan_path_text:
+        print("No uncertainty plan selected.")
+        return
+    plan_path = Path(plan_path_text).expanduser()
+    if not plan_path.is_absolute():
+        plan_path = (Path.cwd() / plan_path).resolve()
+    try:
+        plan = load_plan(plan_path)
+    except Exception as error:
+        print(f"Could not load M11 plan: {error}")
+        return
+
+    print(f"\nMonte Carlo samples: {plan.sample_count}")
+    print(f"Sampling seed: {plan.sampling_seed}")
+    for parameter in plan.parameters:
+        details = f"{parameter.distribution} [{parameter.lower}, {parameter.upper}]"
+        if parameter.mode is not None:
+            details += f", mode={parameter.mode}"
+        print(f"  {parameter.target_path}: {details}")
+    if plan.criteria:
+        print("\nUser-defined robustness criteria:")
+        for criterion in plan.criteria:
+            expression = f"metric {criterion.operator} {criterion.threshold}"
+            if criterion.operator == "between":
+                expression = f"{criterion.threshold} <= metric <= {criterion.upper_threshold}"
+            print(f"  {criterion.metric_name}: {expression}")
+    else:
+        print("No robustness thresholds supplied; only uncertainty and sensitivity will be reported.")
+
+    execution_base_seed = None
+    if artifact.paradigm.value == "agent_based":
+        seed_text = input("ABM execution base seed (blank uses compiled model seed): ").strip()
+        if seed_text:
+            try:
+                execution_base_seed = int(seed_text)
+                if execution_base_seed < 0:
+                    raise ValueError
+            except ValueError:
+                print("Execution base seed must be a non-negative integer.")
+                return
+        print("ABM run-to-run randomness will contribute to the observed output spread.")
+    else:
+        print("DES V1 is deterministic; observed output spread comes from sampled inputs.")
+
+    print(f"\nM11 will execute exactly {plan.sample_count} model runs through M9.")
+    confirm = input("Start this uncertainty experiment? [y/N]: ").strip().lower()
+    if confirm not in {"y", "yes"}:
+        print("Experiment cancelled; no simulation was run.")
+        return
+
+    try:
+        result, report = run_uncertainty_analysis(
+            artifact, plan, execution_base_seed=execution_base_seed,
+        )
+    except Exception as error:
+        print(f"M11 execution or analysis failed: {error}")
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result_path = output_dir / f"{artifact.project_id}_m9_m11_sampling_execution.json"
+    version = 2
+    while result_path.exists():
+        result_path = output_dir / f"{artifact.project_id}_m9_m11_sampling_execution_v{version}.json"
+        version += 1
+    report_path = output_dir / f"{artifact.project_id}_m11_uncertainty_report.json"
+    report_version = 2
+    while report_path.exists():
+        report_path = output_dir / f"{artifact.project_id}_m11_uncertainty_report_v{report_version}.json"
+        report_version += 1
+    csv_path = report_path.with_suffix(".csv")
+    save_result(result, result_path)
+    save_report(report, report_path)
+    export_summary_csv(report, csv_path)
+
+    print("\n--- M11 Outcome Distributions ---")
+    for metric in report.metric_distributions:
+        unit = f" {metric.unit}" if metric.unit else ""
+        print(
+            f"{metric.metric_name}: mean={metric.mean:.6g}{unit}, "
+            f"SD={metric.population_stddev:.6g}, median={metric.median:.6g}, "
+            f"P05={metric.percentile_05:.6g}, P95={metric.percentile_95:.6g}, "
+            f"range=[{metric.minimum:.6g}, {metric.maximum:.6g}], n={metric.sample_size}"
+        )
+
+    print("\n--- M11 Sensitivity Screening (Spearman rank correlation) ---")
+    grouped = {}
+    for score in report.sensitivity:
+        grouped.setdefault(score.metric_name, []).append(score)
+    for metric_name, scores in grouped.items():
+        print(f"{metric_name}:")
+        for score in sorted(scores, key=lambda item: item.absolute_rho or -1, reverse=True):
+            value = f"{score.spearman_rho:+.4f}" if score.spearman_rho is not None else "not estimable"
+            print(f"  {score.parameter_path}: rho={value}, rank={score.rank}")
+
+    print("\n--- M11 Robustness ---")
+    for criterion in report.robustness.criteria:
+        fraction = f"{criterion.observed_fraction:.1%}" if criterion.observed_fraction is not None else "not evaluated"
+        print(f"{criterion.metric_name}: {criterion.passing_runs}/{criterion.evaluated_runs} met criterion ({fraction})")
+    if report.criteria:
+        fraction = f"{report.robustness.observed_fraction:.1%}" if report.robustness.observed_fraction is not None else "not evaluated"
+        print(f"All criteria jointly met: {report.robustness.passing_runs}/{report.robustness.evaluated_runs} ({fraction})")
+
+    for warning in report.warnings:
+        print(f"\nAnalysis note: {warning}")
+    print(f"\nM9 sampled execution: {result_path}")
+    print(f"M11 report JSON: {report_path}")
+    print(f"M11 summary CSV: {csv_path}")
+    print("Results are conditional on the specified model, distributions, sample design and execution settings.")
+
+
+def inspect_uncertainty_report():
+    """Inspect a saved, integrity-verified M11 report."""
+    from pathlib import Path
+    from uncertainty import load_report
+
+    output_dir = Path(__file__).resolve().parent / "outputs"
+    candidates = sorted(
+        output_dir.glob("*_m11_uncertainty_report*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+    print("\n--- Inspect M11 Uncertainty Report ---")
+    if candidates:
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nReport number or M11 JSON path: ").strip().strip('"')
+    if not selection:
+        print("No report selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid report number.")
+            return
+        report_path = candidates[index - 1]
+    else:
+        report_path = Path(selection).expanduser()
+        if not report_path.is_absolute():
+            report_path = (Path.cwd() / report_path).resolve()
+    try:
+        report = load_report(report_path)
+    except Exception as error:
+        print(f"Could not load or verify M11 report: {error}")
+        return
+
+    print(f"\nProject: {report.project_title}")
+    print(f"Revision: {report.revision_id} (v{report.revision_version})")
+    print(f"Paradigm: {report.paradigm} | Backend: {report.backend_name}")
+    print(f"M8 artifact: {report.artifact_id}")
+    print(f"M9 experiment: {report.experiment_id}")
+    print(f"Samples: {report.sample_count} | Failed runs: {report.failed_runs}")
+    print(f"Sampling seed: {report.sampling_seed}")
+    print("\nOutcome distributions:")
+    for metric in report.metric_distributions:
+        print(f"  {metric.metric_name}: mean={metric.mean:.6g}, SD={metric.population_stddev:.6g}, P05={metric.percentile_05:.6g}, P95={metric.percentile_95:.6g}, range=[{metric.minimum:.6g}, {metric.maximum:.6g}]")
+    print("\nSensitivity ranking:")
+    for metric_name in sorted({item.metric_name for item in report.sensitivity}):
+        print(f"  {metric_name}:")
+        scores = [item for item in report.sensitivity if item.metric_name == metric_name]
+        for score in sorted(scores, key=lambda item: item.absolute_rho or -1, reverse=True):
+            rho = f"{score.spearman_rho:+.4f}" if score.spearman_rho is not None else "not estimable"
+            print(f"    {score.parameter_path}: rho={rho}, rank={score.rank}")
+    if report.criteria:
+        print("\nRobustness criteria:")
+        for item in report.robustness.criteria:
+            fraction = f"{item.observed_fraction:.1%}" if item.observed_fraction is not None else "not evaluated"
+            print(f"  {item.metric_name}: {item.passing_runs}/{item.evaluated_runs} ({fraction})")
+        fraction = f"{report.robustness.observed_fraction:.1%}" if report.robustness.observed_fraction is not None else "not evaluated"
+        print(f"  All criteria jointly met: {report.robustness.passing_runs}/{report.robustness.evaluated_runs} ({fraction})")
+    for warning in report.warnings:
+        print(f"\nAnalysis note: {warning}")
+    print(f"\nReport integrity verified: {report_path}")
 
 
 if __name__ == "__main__":

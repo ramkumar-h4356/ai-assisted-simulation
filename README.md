@@ -15,12 +15,13 @@ An extensible Python platform for helping people formalize, inspect and explore 
 - Deterministic M8 compilation profiles that bind target-model fields to exact conceptual elements or explicitly documented experiment parameters, then validate against the real DES/ABM model schemas.
 - M9 controlled execution of integrity-verified M8 artifacts, reproducible seeded ABM runs, deterministic DES runs, native trace capture, failure records and integrity-checked experiment-result persistence.
 - M10 bounded Cartesian parameter sweeps over explicit M8 `user_parameter` bindings, replication orchestration through M9, descriptive per-variant statistics, baseline deltas, marginal factor-level analysis, integrity-checked reports and CSV export.
+- M11 reproducible Monte Carlo sampling of numeric M8 `user_parameter` fields, outcome distributions, Spearman sensitivity screening, user-defined robustness criteria, provenance checks and integrity-checked JSON/CSV reports.
 
 ## Planned capabilities
 
 - `simulations/mathematical`: Equation-to-Simulation using validated mathematical representations and numerical solvers.
 - `simulations/data_driven`: Dataset profiling and guided/automatic data-to-model construction.
-- Inferential statistics, confidence intervals, optimization, common-random-number designs, richer sensitivity analysis, visualization and evidence-grounded result interpretation (future milestones).
+- Inferential statistics, confidence intervals, variance-based global sensitivity indices, optimization, common-random-number designs, visualization and evidence-grounded result interpretation (future milestones).
 
 These are separate model families that will reuse the common backend contracts where appropriate. Not every planned capability is implemented yet; consult each package's README and milestone report for its exact status.
 
@@ -34,6 +35,7 @@ readiness/       M7 deterministic readiness and four-paradigm suitability assess
 compilation/     M8 traceable conceptual-to-DES/ABM specification compilation
 execution/       M9 controlled backend execution, experiment records and trace persistence
 experimentation/ M10 bounded parameter grids, comparative statistics and analysis persistence
+uncertainty/     M11 Monte Carlo input sampling, sensitivity screening and robustness analysis
 simulations/
   core/          Shared specification and backend contracts
   des/           Discrete-event models, AI workflow, validation and execution
@@ -51,6 +53,7 @@ tests/
   compilation/   M8 profile provenance, native-model validation, compilation gates and artifact integrity tests
   execution/     M9 seeded execution, trace capture, bounded failures and result integrity tests
   experimentation/ M10 grid generation, provenance-safe analysis, statistics and report-integrity tests
+  uncertainty/    M11 distribution sampling, M9 execution checks, sensitivity, robustness and report-integrity tests
 ```
 
 ## Setup
@@ -121,3 +124,10 @@ Choose option 11 to create a parameter sweep from a JSON grid-factor file, run i
 M10 reports per-variant run counts, numeric means/population standard deviations/medians/ranges, categorical counts, numeric deltas versus baseline and marginal factor-level summaries. Option 11 can also include earlier M9 results, but only when they come from the same exact M8 artifact and conceptual revision. It saves a fingerprinted analysis JSON and a CSV summary. Option 12 inspects a saved M10 report.
 
 These are descriptive summaries of simulated outcomes, not significance tests or proof of real-world effects. With multiple varied factors, level summaries are marginal across the other factors and interactions are not independently estimated. ABM comparisons currently use M9's consecutive unpaired seeds; the report warns about this limitation. See `experimentation/README.md`, `M10_ARCHITECTURE.md`, `MILESTONE10_REPORT.md` and `M10_TEST_REPORT.md`.
+
+
+## Sensitivity, uncertainty and robustness analysis (M11)
+
+Choose option 13 to load an M8 artifact and an M11 uncertainty-plan JSON file. The plan declares numeric input parameters, uniform or triangular distributions, a reproducible sampling seed, and optional output acceptance criteria. M11 creates 3–100 parameter samples and executes exactly one run per sample through M9. The workflow saves the M9 sampled execution result, a fingerprinted M11 JSON report and a CSV export. Option 14 inspects a saved report. An illustrative plan is available at `scenarios/uncertainty/plan_example.json`; its paths must be checked against the selected artifact's actual M8 `user_parameter` bindings.
+
+M11 reports output means, population standard deviations, medians, interpolated 5th/95th percentiles and observed ranges. Spearman rank correlations provide exploratory monotonic sensitivity screening. User-defined `<=`, `>=` and `between` criteria are evaluated individually and jointly. For ABM, output spread includes both sampled input variation and stochastic run-to-run variation; V1 does not separate them. Spearman scores are not causal effects, and robustness fractions are finite-sample observed proportions—not real-world probabilities or proof of theory validity. See `uncertainty/README.md`, `M11_ARCHITECTURE.md`, `MILESTONE11_REPORT.md` and `M11_TEST_REPORT.md`.

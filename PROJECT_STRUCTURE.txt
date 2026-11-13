@@ -205,3 +205,22 @@ scenarios/experimentation/README.md - Grid input format and artifact-specific pa
 M10_ARCHITECTURE.md - Design, execution flow, statistical interpretation and limitations
 MILESTONE10_REPORT.md - M10 implementation summary and scope boundaries
 M10_TEST_REPORT.md - focused test coverage and environment limitations
+
+Milestone 11 additions:
+uncertainty/
+  __init__.py       Public M11 sampling, analysis, model and serialization API
+  models.py         Distribution, robustness criterion, sensitivity and report contracts
+  sampling.py       Reproducible Monte Carlo sampling for exact M8 user_parameter paths
+  analysis.py       M9 provenance verification, output distributions, Spearman screening and robustness evaluation
+  serialization.py  Strict plan parsing, fingerprinted report JSON and CSV export
+  README.md         Public M11 API and plan-format guide
+tests/uncertainty/
+  test_sampling.py     Distribution ranges, reproducibility, type preservation and binding validation
+  test_analysis.py     M9 execution, sensitivity, uncertainty, robustness, failure and provenance checks
+  test_serialization.py Strict plan parsing, report integrity, round-trip and CSV export
+scenarios/uncertainty/
+  plan_example.json    Illustrative uniform/triangular distributions and output criteria
+  README.md            M11 plan fields and artifact-specific path guidance
+M11_ARCHITECTURE.md    Sampling, execution, analysis flow and statistical limitations
+MILESTONE11_REPORT.md  M11 implementation summary and scope boundaries
+M11_TEST_REPORT.md     Focused test coverage and environment limitations
