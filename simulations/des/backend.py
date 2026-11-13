@@ -9,6 +9,7 @@ from .model import Resource, Scenario
 from .runtime import (
     EntityMetrics,
     ResourceMetrics,
+    SimulationEvent,
     SimulationEngine,
     calculate_entity_metrics,
     calculate_resource_metrics,
@@ -27,6 +28,7 @@ class ScenarioResult:
     average_waiting_time: float
     completion_time: float
     resource_metrics: tuple[ResourceMetrics, ...]
+    events: tuple[SimulationEvent, ...] = ()
 
 def run_scenario(scenario: Scenario) -> ScenarioResult:
     """Run a scenario and calculate its performance metrics."""
@@ -76,6 +78,7 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
         average_waiting_time=average_waiting_time,
         completion_time=completion_time,
         resource_metrics=tuple(resource_metrics),
+        events=tuple(events),
     )
 
 def compare_scenarios(

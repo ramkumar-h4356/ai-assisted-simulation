@@ -25,6 +25,36 @@ class ScenarioTests(unittest.TestCase):
         self.assertEqual(result.average_waiting_time, 2.0)
         self.assertEqual(result.completion_time, 10.0)
 
+    def test_run_scenario_retains_ordered_runtime_event_log(self):
+        scenario = Scenario(
+            name="One machine",
+            resource_name="machine",
+            resource_capacity=1,
+            jobs=self.jobs,
+        )
+
+        result = run_scenario(scenario)
+
+        self.assertEqual(len(result.events), 6)
+        self.assertEqual(
+            [
+                (event.entity_id, event.event_type, event.time)
+                for event in result.events
+            ],
+            [
+                ("A", "arrived", 0.0),
+                ("A", "service_started", 0.0),
+                ("B", "arrived", 2.0),
+                ("A", "service_completed", 6.0),
+                ("B", "service_started", 6.0),
+                ("B", "service_completed", 10.0),
+            ],
+        )
+        self.assertEqual(
+            [event.time for event in result.events],
+            sorted(event.time for event in result.events),
+        )
+
     def test_two_machines_reduce_waiting(self):
         scenario = Scenario(
             name="Two machines",

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/ai-assisted-simulation/compilation-profile.schema.json",
+  "title": "M8 Compilation Profile",
+  "description": "User-approved, revision-bound mapping from an idea model to an implemented DES or ABM target model.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["profile_id", "project_id", "revision_id", "paradigm", "model_data", "bindings"],
+  "properties": {
+    "profile_id": {"type": "string", "minLength": 1},
+    "project_id": {"type": "string", "minLength": 1},
+    "revision_id": {"type": "string", "minLength": 1},
+    "paradigm": {"type": "string", "enum": ["discrete_event", "agent_based"]},
+    "model_data": {"type": "object", "description": "Must satisfy the selected paradigm's native schema and semantic validator."},
+    "bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["target_path", "source", "element_ids", "note"],
+        "properties": {
+          "target_path": {"type": "string", "minLength": 1, "description": "Dotted object path with explicit numeric array indexes; wildcards are unsupported."},
+          "source": {"type": "string", "enum": ["conceptual_element", "user_parameter"]},
+          "element_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "note": {"type": "string"}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"source": {"const": "conceptual_element"}}, "required": ["source"]},
+            "then": {"properties": {"element_ids": {"minItems": 1}}}
+          },
+          {
+            "if": {"properties": {"source": {"const": "user_parameter"}}, "required": ["source"]},
+            "then": {"properties": {"element_ids": {"maxItems": 0}, "note": {"minLength": 1}}}
+          }
+        ]
+      }
+    }
+  }
+}

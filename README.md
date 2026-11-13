@@ -12,12 +12,14 @@ An extensible Python platform for helping people formalize, inspect and explore 
 - Shared simulation specification and backend registry.
 - ABM V1 declarative model types, AI-assisted construction and clarification, deterministic validation, sequential execution, seeded stochastic rules, result history, and shared backend integration.
 - AI-assisted idea interpretation, bounded clarification, uncertainty retention and element-level provenance (M6).
+- Deterministic M8 compilation profiles that bind target-model fields to exact conceptual elements or explicitly documented experiment parameters, then validate against the real DES/ABM model schemas.
+- M9 controlled execution of integrity-verified M8 artifacts, reproducible seeded ABM runs, deterministic DES runs, native trace capture, failure records and integrity-checked experiment-result persistence.
 
 ## Planned capabilities
 
 - `simulations/mathematical`: Equation-to-Simulation using validated mathematical representations and numerical solvers.
 - `simulations/data_driven`: Dataset profiling and guided/automatic data-to-model construction.
-- Paradigm-specific translation from selected conceptual models into executable simulation specifications (next milestone).
+- Experiment comparison, statistical analysis, parameter sweeps, sensitivity analysis, visualization and result interpretation (next milestones).
 
 These are separate model families that will reuse the common backend contracts where appropriate. Not every planned capability is implemented yet; consult each package's README and milestone report for its exact status.
 
@@ -28,6 +30,8 @@ conceptual/      Idea representation, provenance, revisions, JSON persistence an
 knowledge/       Knowledge documents, local corpus, retrieval, mapping candidates and review workflow
 idea_assistant/  M6 structured idea interpretation, clarification, provenance and session audit
 readiness/       M7 deterministic readiness and four-paradigm suitability assessment
+compilation/     M8 traceable conceptual-to-DES/ABM specification compilation
+execution/       M9 controlled backend execution, experiment records and trace persistence
 simulations/
   core/          Shared specification and backend contracts
   des/           Discrete-event models, AI workflow, validation and execution
@@ -42,6 +46,8 @@ tests/
   des/           Discrete-event tests
   abm/           ABM schema, pipeline, model, validation, engine and backend tests
   readiness/     M7 paradigm-fit, readiness, clarification and report-persistence tests
+  compilation/   M8 profile provenance, native-model validation, compilation gates and artifact integrity tests
+  execution/     M9 seeded execution, trace capture, bounded failures and result integrity tests
 ```
 
 ## Setup
@@ -87,3 +93,19 @@ Choose option 7 to assess a saved M6 conceptual project or another conceptual JS
 DES and ABM are reported as implemented backends. Mathematical and data-driven are assessment-only: M7 can inspect conceptual suitability, but their execution engines have not yet been delivered. A dataset reference is not treated as proof that a data file can be accessed or is usable.
 
 The report is persisted separately from the conceptual project and records the exact revision assessed. It never mutates an idea, calls an LLM, generates executable code or proves scientific validity. See `readiness/README.md`, `M7_ARCHITECTURE.md`, `MILESTONE7_REPORT.md` and `M7_TEST_REPORT.md`.
+
+
+## Conceptual-to-executable specification compilation (M8)
+
+Choose option 8 to compile a saved conceptual project into a target specification for DES V1 or ABM V1. M8 requires M7 to report `READY_FOR_IMPLEMENTATION_PLANNING` for the selected paradigm. It then requires a user-approved compilation profile containing the exact native target model data and provenance bindings. A binding either points to one or more element IDs in the selected conceptual revision or documents an experiment parameter supplied by the user.
+
+This boundary is intentional: an idea such as “people cooperate when trust is high” does not uniquely define a population size, initial trust distribution, threshold, activation schedule or stopping condition. M8 does not invent those details. It validates the explicit target model with the existing DES/ABM parsers and semantic validators, and writes a revision-bound artifact with a SHA-256 model fingerprint. Unmapped conceptual elements are surfaced as warnings; at least one conceptual element and one mechanism must be represented.
+
+If no profile path is supplied, option 8 creates an intentionally incomplete JSON template for editing. The profile schema and API are documented in `compilation/README.md`; run `python -m compilation.demo` for an offline ABM compilation example. M8 does not execute a simulation, and mathematical/data-driven remain assessment-only until their backends exist. See `M8_ARCHITECTURE.md`, `MILESTONE8_REPORT.md` and `M8_TEST_REPORT.md`.
+
+
+## Controlled execution and result capture (M9)
+
+Choose option 9 to load an integrity-checked M8 specification artifact and execute it through its implemented backend. The workflow accepts named parameter sets (optional JSON input) and replications per set, with at most 100 total executions. A parameter can vary only when its exact target path is already documented as an M8 `user_parameter`; conceptual bindings cannot be overwritten. ABM runs receive consecutive random seeds, while DES V1 is deterministic and does not consume random seeds. M9 captures full DES event logs or ABM state/rule histories alongside metrics. Option 10 inspects a saved experiment result.
+
+Every M9 result records the M8 artifact ID and fingerprint, project ID, exact conceptual revision, paradigm, backend, run seeds and timestamps. Failed runs are saved with bounded error details; successful runs retain machine-readable traces. Result JSON is fingerprinted and verified when loaded. A 500,000-record estimated trace budget bounds output size. See `execution/README.md`, `M9_ARCHITECTURE.md`, `MILESTONE9_REPORT.md` and `M9_TEST_REPORT.md`.

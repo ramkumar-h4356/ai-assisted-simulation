@@ -501,6 +501,330 @@ def run_readiness_assessment():
     print(f"\nM7 readiness report saved to: {report_path}")
     print("The conceptual project was not modified. The report is tied to the exact revision assessed.")
 
+
+def run_compilation_workflow():
+    """Create or validate an explicit M8 profile for a saved conceptual revision."""
+    import json
+    from pathlib import Path
+    from conceptual import load_idea_project
+    from readiness import Paradigm, assess_readiness
+    from compilation import (
+        CompilationParadigm, compile_profile, create_profile_template,
+        load_profile, save_artifact,
+    )
+
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs"
+    candidates = sorted(
+        list(output_dir.glob("*_m6_idea*.json")) + list(output_dir.glob("*.idea.json")),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+
+    print("\n--- M8: Conceptual-to-Executable Specification ---")
+    if candidates:
+        print("Recent conceptual projects:")
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nProject number or conceptual JSON path: ").strip().strip('"')
+    if not selection:
+        print("No project selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid project number.")
+            return
+        project_path = candidates[index - 1]
+    else:
+        project_path = Path(selection).expanduser()
+        if not project_path.is_absolute():
+            project_path = (Path.cwd() / project_path).resolve()
+
+    try:
+        project = load_idea_project(project_path)
+    except Exception as error:
+        print(f"Could not load conceptual project: {error}")
+        return
+
+    revision = project.current_revision
+    print(f"\nProject: {project.title}")
+    print(f"Revision: {project.current_revision_id}")
+    print("\nSource element catalog for profile bindings:")
+    for label, collection, formatter in (
+        ("Concept", revision.concepts, lambda item: f"{item.name} [{item.kind.value}]"),
+        ("Property", revision.properties, lambda item: f"{item.name} -> {item.concept_id} [{item.data_type.value}]"),
+        ("Relationship", revision.relationships, lambda item: f"{item.label}: {item.source_concept_id} -> {item.target_concept_id}"),
+        ("Mechanism", revision.mechanisms, lambda item: f"{item.name} ({item.status.value})"),
+        ("Assumption", revision.assumptions, lambda item: item.statement),
+        ("Constraint", revision.constraints, lambda item: item.statement),
+    ):
+        for item in collection:
+            print(f"  {label}: {item.id} — {formatter(item)}")
+    print("Select the paradigm you have chosen after reviewing M7:")
+    print("  1. Discrete-event (DES V1 / SimPy)")
+    print("  2. Agent-based (ABM V1)")
+    print("  3. Mathematical (assessment only; no M8 backend)")
+    print("  4. Data-driven (assessment only; no M8 backend)")
+    selected = input("Paradigm (1-4): ").strip()
+    mapping = {
+        "1": (CompilationParadigm.DISCRETE_EVENT, Paradigm.DISCRETE_EVENT),
+        "2": (CompilationParadigm.AGENT_BASED, Paradigm.AGENT_BASED),
+        "3": (CompilationParadigm.MATHEMATICAL, Paradigm.MATHEMATICAL),
+        "4": (CompilationParadigm.DATA_DRIVEN, Paradigm.DATA_DRIVEN),
+    }
+    if selected not in mapping:
+        print("Invalid paradigm selection.")
+        return
+    target_paradigm, readiness_paradigm = mapping[selected]
+    readiness_report = assess_readiness(project, selected_paradigm=readiness_paradigm)
+    selected_assessment = readiness_report.assessment_for(readiness_paradigm)
+    print(f"\nM7 status: {readiness_report.status.value}")
+    print(f"Paradigm fit: {selected_assessment.fit.value}")
+    print(f"Backend: {selected_assessment.backend_status.value}")
+    if selected in {"3", "4"}:
+        print("This paradigm can be assessed in M7, but its executable backend has not been implemented. M8 will not create a pretend model.")
+        return
+    if readiness_report.status.value != "ready_for_implementation_planning":
+        print("M8 requires M7 status ready_for_implementation_planning. Resolve the listed M7 questions first.")
+        for question in readiness_report.clarification_items:
+            print(f"  - {question.question}")
+        return
+
+    profile_path_text = input("\nCompilation profile JSON path (Enter to create an editable template): ").strip().strip('"')
+    if not profile_path_text:
+        template = create_profile_template(project, target_paradigm)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        template_path = output_dir / f"{project.id}_m8_{target_paradigm.value}_profile_template.json"
+        version = 2
+        while template_path.exists():
+            template_path = output_dir / f"{project.id}_m8_{target_paradigm.value}_profile_template_v{version}.json"
+            version += 1
+        template_path.write_text(json.dumps(template, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"\nAn intentionally incomplete template was created: {template_path}")
+        print("Edit model_data with explicit runtime values, then add bindings that connect target paths to current conceptual element IDs.")
+        print("Use source='user_parameter' with a clear note for experiment values; do not present illustrative values as evidence.")
+        print("Run option 8 again and provide the edited profile path.")
+        return
+
+    profile_path = Path(profile_path_text).expanduser()
+    if not profile_path.is_absolute():
+        profile_path = (Path.cwd() / profile_path).resolve()
+    try:
+        profile = load_profile(profile_path)
+        result = compile_profile(project, profile)
+    except Exception as error:
+        print(f"Could not compile profile: {error}")
+        return
+
+    print("\nCompilation diagnostics:")
+    for issue in result.issues:
+        print(f"  [{issue.severity.value}] {issue.code} ({issue.path}): {issue.message}")
+    if not result.is_ready:
+        print("\nNo executable specification was produced. Fix the errors and try again.")
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    artifact_path = output_dir / f"{project.id}_m8_{target_paradigm.value}_specification.json"
+    version = 2
+    while artifact_path.exists():
+        artifact_path = output_dir / f"{project.id}_m8_{target_paradigm.value}_specification_v{version}.json"
+        version += 1
+    save_artifact(result.artifact, artifact_path)
+    print(f"\nValidated specification saved: {artifact_path}")
+    print(f"Artifact ID: {result.artifact.artifact_id}")
+    print(f"Backend: {result.artifact.backend_name}")
+    print("The native SimulationSpecification is ready for the execution milestone. No simulation was run and the conceptual project was not modified.")
+
+
+
+def run_execution_workflow():
+    """Execute an integrity-checked M8 artifact and save an M9 result."""
+    import json
+    from pathlib import Path
+    from compilation import load_artifact
+    from execution import (
+        ExperimentConfig, ParameterOverride, ParameterSet,
+        execute_artifact, save_result,
+    )
+
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs"
+    candidates = sorted(
+        output_dir.glob("*_m8_*_specification*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+
+    print("\n--- M9: Controlled Simulation Execution ---")
+    if candidates:
+        print("Recent verified M8 artifact candidates:")
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nArtifact number or M8 artifact JSON path: ").strip().strip('"')
+    if not selection:
+        print("No artifact selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid artifact number.")
+            return
+        artifact_path = candidates[index - 1]
+    else:
+        artifact_path = Path(selection).expanduser()
+        if not artifact_path.is_absolute():
+            artifact_path = (Path.cwd() / artifact_path).resolve()
+
+    try:
+        artifact = load_artifact(artifact_path)
+    except Exception as error:
+        print(f"Could not load or verify the M8 artifact: {error}")
+        print("Execution was not started.")
+        return
+
+    print(f"\nProject: {artifact.project_title}")
+    print(f"Revision: {artifact.revision_id} (v{artifact.revision_version})")
+    print(f"Paradigm: {artifact.paradigm.value}")
+    print(f"Backend: {artifact.backend_name}")
+    print(f"Artifact ID: {artifact.artifact_id}")
+
+    runs_text = input("Replications per parameter set [1, maximum 100 total executions]: ").strip()
+    try:
+        runs = int(runs_text) if runs_text else 1
+    except ValueError:
+        print("Number of runs must be an integer.")
+        return
+
+    seed = None
+    if artifact.paradigm.value == "agent_based":
+        seed_text = input("Base random seed (blank uses the seed stored in the compiled model): ").strip()
+        if seed_text:
+            try:
+                seed = int(seed_text)
+            except ValueError:
+                print("Base seed must be a non-negative integer.")
+                return
+    else:
+        print("DES V1 is deterministic; it does not use random seeds.")
+
+    parameter_sets = ()
+    parameter_path_text = input("Optional JSON file with parameter sets (blank uses the compiled baseline): ").strip().strip('"')
+    if parameter_path_text:
+        parameter_path = Path(parameter_path_text).expanduser()
+        if not parameter_path.is_absolute():
+            parameter_path = (Path.cwd() / parameter_path).resolve()
+        try:
+            raw_parameter_sets = json.loads(parameter_path.read_text(encoding="utf-8"))
+            if not isinstance(raw_parameter_sets, list):
+                raise ValueError("parameter-set JSON must contain a top-level array")
+            parameter_sets = tuple(
+                ParameterSet(
+                    name=item["name"],
+                    overrides=tuple(ParameterOverride(**override) for override in item["overrides"]),
+                )
+                for item in raw_parameter_sets
+            )
+        except Exception as error:
+            print(f"Could not read parameter sets: {error}")
+            return
+
+    try:
+        config = ExperimentConfig(
+            runs=runs, base_seed=seed, continue_on_error=True,
+            parameter_sets=parameter_sets,
+        )
+        print(f"Total executions: {config.total_runs}")
+        result = execute_artifact(artifact, config)
+    except Exception as error:
+        print(f"Execution setup rejected: {error}")
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result_path = output_dir / f"{artifact.project_id}_m9_execution.json"
+    version = 2
+    while result_path.exists():
+        result_path = output_dir / f"{artifact.project_id}_m9_execution_v{version}.json"
+        version += 1
+    save_result(result, result_path)
+
+    completed = sum(run.status.value == "completed" for run in result.runs)
+    failed = len(result.runs) - completed
+    print("\n--- Experiment Summary ---")
+    print(f"Status: {result.status.value}")
+    print(f"Runs completed: {completed}")
+    print(f"Runs failed: {failed}")
+    for run in result.runs:
+        print(f"\nRun {run.run_index}: {run.status.value} | set={run.parameter_set} | seed={run.seed} | elapsed={run.elapsed_seconds:.6f}s")
+        if run.parameters:
+            print(f"  Parameters: {run.parameters}")
+        if run.status.value == "completed":
+            for metric in run.metrics:
+                suffix = f" {metric.unit}" if metric.unit else ""
+                print(f"  {metric.name}: {metric.value}{suffix}")
+        else:
+            print(f"  {run.error_type}: {run.error_message}")
+    print(f"\nFull result and execution trace saved to: {result_path}")
+    print("The source conceptual project and M8 artifact were not modified.")
+
+
+def inspect_execution_result():
+    """Display a concise summary from a saved, integrity-checked M9 result."""
+    from pathlib import Path
+    from execution import load_result
+
+    output_dir = Path(__file__).resolve().parent / "outputs"
+    candidates = sorted(
+        output_dir.glob("*_m9_execution*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+    print("\n--- Inspect M9 Experiment Result ---")
+    if candidates:
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nResult number or M9 result JSON path: ").strip().strip('"')
+    if not selection:
+        print("No result selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid result number.")
+            return
+        result_path = candidates[index - 1]
+    else:
+        result_path = Path(selection).expanduser()
+        if not result_path.is_absolute():
+            result_path = (Path.cwd() / result_path).resolve()
+    try:
+        result = load_result(result_path)
+    except Exception as error:
+        print(f"Could not load or verify the M9 result: {error}")
+        return
+
+    print(f"\nExperiment: {result.experiment_id}")
+    print(f"Project: {result.project_title}")
+    print(f"Revision: {result.revision_id} (v{result.revision_version})")
+    print(f"Paradigm: {result.paradigm} | Backend: {result.backend_name}")
+    print(f"Outcome: {result.status.value} | Runs: {len(result.runs)}/{result.config.total_runs} total executions")
+    print(f"Source M8 artifact: {result.artifact_id}")
+    for run in result.runs:
+        print(f"\nRun {run.run_index}: {run.status.value} | set={run.parameter_set} | seed={run.seed}")
+        if run.parameters:
+            print(f"  Parameters: {run.parameters}")
+        if run.status.value == "completed":
+            for metric in run.metrics:
+                suffix = f" {metric.unit}" if metric.unit else ""
+                print(f"  {metric.name}: {metric.value}{suffix}")
+            trace_counts = {key: len(value) for key, value in run.trace.items() if isinstance(value, list)}
+            if trace_counts:
+                print(f"  Trace records: {trace_counts}")
+        else:
+            print(f"  {run.error_type}: {run.error_message}")
+    print(f"\nResult integrity verified: {result_path}")
+
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
@@ -511,8 +835,11 @@ def main():
     print("5. Search knowledge and review real-world mapping candidates")
     print("6. Interpret and formalize a new idea with AI")
     print("7. Assess simulation readiness and compare paradigms")
+    print("8. Compile a conceptual revision into an executable specification")
+    print("9. Execute a compiled specification and save experiment results")
+    print("10. Inspect a saved experiment result")
 
-    choice = input("\nChoose an option (1-7): ").strip()
+    choice = input("\nChoose an option (1-10): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -528,8 +855,14 @@ def main():
         run_ai_idea_formalization()
     elif choice == "7":
         run_readiness_assessment()
+    elif choice == "8":
+        run_compilation_workflow()
+    elif choice == "9":
+        run_execution_workflow()
+    elif choice == "10":
+        inspect_execution_result()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 7.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 10.")
 
 
 if __name__ == "__main__":

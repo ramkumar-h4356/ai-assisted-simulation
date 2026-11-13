@@ -158,3 +158,25 @@ tests/readiness/
 M7_ARCHITECTURE.md  Evaluator contracts, flow, rules and epistemic boundaries
 MILESTONE7_REPORT.md M7 scope, delivered behaviour and limitations
 M7_TEST_REPORT.md   M7 test results and integration verification notes
+
+
+Milestone 8 additions:
+compilation/
+  __init__.py       Public M8 compilation, models and serialization API
+  models.py         Strict profile, binding, issue, artifact and result contracts
+  compiler.py       M7 gate, revision/provenance checks and DES/ABM native compilation
+  serialization.py Strict profile/artifact JSON persistence and fingerprint verification
+  profile.schema.json JSON Schema for editable M8 compilation profiles
+  demo.py           Offline demonstration of explicit ABM compilation
+  README.md         Profile schema, API, safety boundaries and backend support
+tests/compilation/
+  helpers.py        Reusable explicit DES and ABM compilation profiles
+  test_compiler.py  Readiness gates, provenance, native validation and compilation tests
+  test_serialization.py Profile/artifact round-trip and tamper-detection tests
+  test_templates.py Incomplete profile-template generation tests
+M8_ARCHITECTURE.md  Compiler boundary, provenance model, validation flow and limits
+MILESTONE8_REPORT.md M8 implementation summary and scope
+M8_TEST_REPORT.md   M8 test results and integration verification notes
+
+execution/ - M9 controlled execution, bounded experiment configuration, run records, trace serialization, and integrity verification
+tests/execution/ - seeded ABM runs, result persistence, integrity, readiness, and failure handling tests
