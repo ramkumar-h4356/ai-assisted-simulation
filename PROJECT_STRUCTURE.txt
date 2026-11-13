@@ -141,3 +141,20 @@ tests/idea_assistant/
   test_service.py  Clarification, retrieval, provenance and persistence checks
 M6_ARCHITECTURE.md  Dependency direction, workflow and epistemic boundaries
 M6_TEST_REPORT.md   Test results and environment limitations
+
+
+Milestone 7 additions:
+readiness/
+  __init__.py       Public M7 assessment and report-persistence API
+  models.py         Immutable readiness, fit, backend, finding and clarification contracts
+  engine.py         Deterministic DES, ABM, mathematical and data-driven evaluators
+  serialization.py Strict JSON report serialization, save and load
+  demo.py           M7 assessment of the included conceptual resource-cooperation scenario
+  README.md         Public usage, status definitions, backend boundaries and limitations
+tests/readiness/
+  helpers.py        Reusable conceptual fixtures for all four paradigms
+  test_engine.py   Fit, readiness, recommendations, traceability and non-mutation tests
+  test_serialization.py Strict JSON persistence tests
+M7_ARCHITECTURE.md  Evaluator contracts, flow, rules and epistemic boundaries
+MILESTONE7_REPORT.md M7 scope, delivered behaviour and limitations
+M7_TEST_REPORT.md   M7 test results and integration verification notes

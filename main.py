@@ -392,6 +392,115 @@ def run_ai_idea_formalization():
     print("The original idea remains unchanged. AI-generated elements remain visibly attributed and require review.")
 
 
+
+def run_readiness_assessment():
+    """Assess a saved M4/M6 idea and compare supported simulation paradigms."""
+    import re
+    from pathlib import Path
+    from conceptual import load_idea_project
+    from readiness import Paradigm, assess_readiness, save_report
+
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs"
+    candidates = sorted(
+        output_dir.glob("*_m6_idea*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+
+    print("\n--- M7: Simulation Readiness Assessment ---")
+    if candidates:
+        print("Recent M6 idea projects:")
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+        print("Enter a listed number, or provide a path to another saved conceptual project.")
+    else:
+        print("No saved M6 project was found automatically. You may provide a path to a conceptual JSON project.")
+
+    selection = input("\nProject number or file path: ").strip().strip('"')
+    if not selection:
+        print("No project selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid project number.")
+            return
+        project_path = candidates[index - 1]
+    else:
+        project_path = Path(selection).expanduser()
+        if not project_path.is_absolute():
+            project_path = (Path.cwd() / project_path).resolve()
+
+    try:
+        project = load_idea_project(project_path)
+        report = assess_readiness(project)
+    except Exception as error:
+        print(f"Could not assess the selected project: {error}")
+        return
+
+    def display(current_report):
+        print(f"\nProject: {current_report.project_title}")
+        print(f"Revision: {current_report.revision_id} (version {current_report.revision_version})")
+        print(f"Readiness: {current_report.status.value}")
+        print(current_report.explanation)
+        if current_report.validation_errors:
+            print("\nStructural validation errors:")
+            for item in current_report.validation_errors:
+                print(f"  - {item}")
+        print("\nParadigm assessments:")
+        for item in current_report.paradigm_assessments:
+            print(f"\n  {item.paradigm.value}: {item.fit.value}")
+            print(f"  Backend: {item.backend_status.value}")
+            print(f"  {item.summary}")
+            for finding in item.supporting_findings:
+                print(f"    + {finding.title}: {finding.explanation}")
+                if finding.element_ids:
+                    print(f"      Elements: {', '.join(finding.element_ids)}")
+            for limitation in item.limitations:
+                print(f"    ! {limitation.title}: {limitation.explanation}")
+            for requirement in item.missing_requirements:
+                print(f"    - Missing: {requirement}")
+        if current_report.recommended_paradigms:
+            print("\nBest-supported paradigm(s): " + ", ".join(item.value for item in current_report.recommended_paradigms))
+        else:
+            print("\nNo paradigm can currently be recommended from the available structure.")
+        if current_report.clarification_items:
+            print("\nClarification questions:")
+            for item in current_report.clarification_items:
+                print(f"  [{item.priority.value}] {item.question}")
+                print(f"    Why: {item.reason}")
+
+    display(report)
+    choices = {
+        "1": Paradigm.DISCRETE_EVENT,
+        "2": Paradigm.AGENT_BASED,
+        "3": Paradigm.MATHEMATICAL,
+        "4": Paradigm.DATA_DRIVEN,
+    }
+    print("\nOptional: select a paradigm to test implementation-planning readiness.")
+    print("  1. Discrete-event  2. Agent-based  3. Mathematical  4. Data-driven")
+    selected = input("Selection (Enter to skip): ").strip()
+    if selected:
+        if selected not in choices:
+            print("Unknown selection; retaining the unselected assessment.")
+        else:
+            report = assess_readiness(project, selected_paradigm=choices[selected])
+            print(f"\nSelected paradigm: {report.selected_paradigm.value}")
+            print(f"Updated readiness: {report.status.value}")
+            print(report.explanation)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stem = re.sub(r"[^a-z0-9_-]+", "_", project.id.casefold()).strip("_") or "idea"
+    report_path = output_dir / f"{stem}_m7_readiness.json"
+    version = 2
+    while report_path.exists():
+        report_path = output_dir / f"{stem}_m7_readiness_v{version}.json"
+        version += 1
+    save_report(report, report_path)
+    print(f"\nM7 readiness report saved to: {report_path}")
+    print("The conceptual project was not modified. The report is tied to the exact revision assessed.")
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
@@ -401,8 +510,9 @@ def main():
     print("4. Inspect and validate a conceptual idea model")
     print("5. Search knowledge and review real-world mapping candidates")
     print("6. Interpret and formalize a new idea with AI")
+    print("7. Assess simulation readiness and compare paradigms")
 
-    choice = input("\nChoose an option (1-6): ").strip()
+    choice = input("\nChoose an option (1-7): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -416,8 +526,10 @@ def main():
         run_knowledge_mapping()
     elif choice == "6":
         run_ai_idea_formalization()
+    elif choice == "7":
+        run_readiness_assessment()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 6.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 7.")
 
 
 if __name__ == "__main__":

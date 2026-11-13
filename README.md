@@ -15,9 +15,9 @@ An extensible Python platform for helping people formalize, inspect and explore 
 
 ## Planned capabilities
 
-- Readiness assessment and translation from conceptual structures into supported simulation representations.
 - `simulations/mathematical`: Equation-to-Simulation using validated mathematical representations and numerical solvers.
 - `simulations/data_driven`: Dataset profiling and guided/automatic data-to-model construction.
+- Paradigm-specific translation from selected conceptual models into executable simulation specifications (next milestone).
 
 These are separate model families that will reuse the common backend contracts where appropriate. Not every planned capability is implemented yet; consult each package's README and milestone report for its exact status.
 
@@ -27,6 +27,7 @@ These are separate model families that will reuse the common backend contracts w
 conceptual/      Idea representation, provenance, revisions, JSON persistence and validation
 knowledge/       Knowledge documents, local corpus, retrieval, mapping candidates and review workflow
 idea_assistant/  M6 structured idea interpretation, clarification, provenance and session audit
+readiness/       M7 deterministic readiness and four-paradigm suitability assessment
 simulations/
   core/          Shared specification and backend contracts
   des/           Discrete-event models, AI workflow, validation and execution
@@ -40,6 +41,7 @@ tests/
   core/          Shared architecture tests
   des/           Discrete-event tests
   abm/           ABM schema, pipeline, model, validation, engine and backend tests
+  readiness/     M7 paradigm-fit, readiness, clarification and report-persistence tests
 ```
 
 ## Setup
@@ -76,3 +78,12 @@ Run `python -m knowledge.demo` or choose option 5 from `python main.py`. See `kn
 ## AI-assisted idea interpretation (M6)
 
 Choose option 6 to describe a new idea, receive a structured conceptual draft, answer targeted clarification questions and save both the project and a clarification audit trail. The workflow preserves the exact original request, keeps unanswered questions open, and distinguishes verbatim user-grounded excerpts from AI inferences and AI suggestions. It can pass local M5 knowledge retrieval leads as context, but it does not treat them as proof or automatically create accepted mappings. M6 is paradigm-independent and does not execute a simulation. See `idea_assistant/README.md`, `M6_ARCHITECTURE.md` and `M6_TEST_REPORT.md`.
+
+
+## Simulation readiness assessment (M7)
+
+Choose option 7 to assess a saved M6 conceptual project or another conceptual JSON project. M7 runs deterministic evaluators for DES, ABM, mathematical and data-driven approaches. Each result includes qualitative fit, traceable findings, limitations, missing requirements and execution-backend availability. The engine can return multiple equally best-supported paradigms; it does not force a single winner.
+
+DES and ABM are reported as implemented backends. Mathematical and data-driven are assessment-only: M7 can inspect conceptual suitability, but their execution engines have not yet been delivered. A dataset reference is not treated as proof that a data file can be accessed or is usable.
+
+The report is persisted separately from the conceptual project and records the exact revision assessed. It never mutates an idea, calls an LLM, generates executable code or proves scientific validity. See `readiness/README.md`, `M7_ARCHITECTURE.md`, `MILESTONE7_REPORT.md` and `M7_TEST_REPORT.md`.
