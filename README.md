@@ -14,12 +14,13 @@ An extensible Python platform for helping people formalize, inspect and explore 
 - AI-assisted idea interpretation, bounded clarification, uncertainty retention and element-level provenance (M6).
 - Deterministic M8 compilation profiles that bind target-model fields to exact conceptual elements or explicitly documented experiment parameters, then validate against the real DES/ABM model schemas.
 - M9 controlled execution of integrity-verified M8 artifacts, reproducible seeded ABM runs, deterministic DES runs, native trace capture, failure records and integrity-checked experiment-result persistence.
+- M10 bounded Cartesian parameter sweeps over explicit M8 `user_parameter` bindings, replication orchestration through M9, descriptive per-variant statistics, baseline deltas, marginal factor-level analysis, integrity-checked reports and CSV export.
 
 ## Planned capabilities
 
 - `simulations/mathematical`: Equation-to-Simulation using validated mathematical representations and numerical solvers.
 - `simulations/data_driven`: Dataset profiling and guided/automatic data-to-model construction.
-- Experiment comparison, statistical analysis, parameter sweeps, sensitivity analysis, visualization and result interpretation (next milestones).
+- Inferential statistics, confidence intervals, optimization, common-random-number designs, richer sensitivity analysis, visualization and evidence-grounded result interpretation (future milestones).
 
 These are separate model families that will reuse the common backend contracts where appropriate. Not every planned capability is implemented yet; consult each package's README and milestone report for its exact status.
 
@@ -32,6 +33,7 @@ idea_assistant/  M6 structured idea interpretation, clarification, provenance an
 readiness/       M7 deterministic readiness and four-paradigm suitability assessment
 compilation/     M8 traceable conceptual-to-DES/ABM specification compilation
 execution/       M9 controlled backend execution, experiment records and trace persistence
+experimentation/ M10 bounded parameter grids, comparative statistics and analysis persistence
 simulations/
   core/          Shared specification and backend contracts
   des/           Discrete-event models, AI workflow, validation and execution
@@ -48,6 +50,7 @@ tests/
   readiness/     M7 paradigm-fit, readiness, clarification and report-persistence tests
   compilation/   M8 profile provenance, native-model validation, compilation gates and artifact integrity tests
   execution/     M9 seeded execution, trace capture, bounded failures and result integrity tests
+  experimentation/ M10 grid generation, provenance-safe analysis, statistics and report-integrity tests
 ```
 
 ## Setup
@@ -109,3 +112,12 @@ If no profile path is supplied, option 8 creates an intentionally incomplete JSO
 Choose option 9 to load an integrity-checked M8 specification artifact and execute it through its implemented backend. The workflow accepts named parameter sets (optional JSON input) and replications per set, with at most 100 total executions. A parameter can vary only when its exact target path is already documented as an M8 `user_parameter`; conceptual bindings cannot be overwritten. ABM runs receive consecutive random seeds, while DES V1 is deterministic and does not consume random seeds. M9 captures full DES event logs or ABM state/rule histories alongside metrics. Option 10 inspects a saved experiment result.
 
 Every M9 result records the M8 artifact ID and fingerprint, project ID, exact conceptual revision, paradigm, backend, run seeds and timestamps. Failed runs are saved with bounded error details; successful runs retain machine-readable traces. Result JSON is fingerprinted and verified when loaded. A 500,000-record estimated trace budget bounds output size. See `execution/README.md`, `M9_ARCHITECTURE.md`, `MILESTONE9_REPORT.md` and `M9_TEST_REPORT.md`.
+
+
+## Experiment design and comparative analysis (M10)
+
+Choose option 11 to create a parameter sweep from a JSON grid-factor file, run its variants through the existing M9 execution layer, and compare the results. A grid factor must point to an exact scalar field already declared as an M8 `user_parameter`; conceptual bindings and inferred fields cannot be varied. The grid is bounded by 100 total executions, including replications. The current values in the M8 artifact can be included as an explicit baseline.
+
+M10 reports per-variant run counts, numeric means/population standard deviations/medians/ranges, categorical counts, numeric deltas versus baseline and marginal factor-level summaries. Option 11 can also include earlier M9 results, but only when they come from the same exact M8 artifact and conceptual revision. It saves a fingerprinted analysis JSON and a CSV summary. Option 12 inspects a saved M10 report.
+
+These are descriptive summaries of simulated outcomes, not significance tests or proof of real-world effects. With multiple varied factors, level summaries are marginal across the other factors and interactions are not independently estimated. ABM comparisons currently use M9's consecutive unpaired seeds; the report warns about this limitation. See `experimentation/README.md`, `M10_ARCHITECTURE.md`, `MILESTONE10_REPORT.md` and `M10_TEST_REPORT.md`.

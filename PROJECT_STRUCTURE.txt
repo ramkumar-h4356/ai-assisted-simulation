@@ -180,3 +180,28 @@ M8_TEST_REPORT.md   M8 test results and integration verification notes
 
 execution/ - M9 controlled execution, bounded experiment configuration, run records, trace serialization, and integrity verification
 tests/execution/ - seeded ABM runs, result persistence, integrity, readiness, and failure handling tests
+
+
+Milestone 9 additions:
+execution/ - M9 bounded execution settings, run/result contracts, backend dispatch, trace capture and integrity-checked JSON persistence
+tests/execution/ - seeded reproducibility, parameter binding restrictions, trace output, execution failures and result serialization
+M9_ARCHITECTURE.md - controlled execution flow, seed policy, parameters, provenance and bounds
+MILESTONE9_REPORT.md - M9 delivery summary and scope boundaries
+M9_TEST_REPORT.md - verification notes and Windows DES test correction
+
+Milestone 10 additions:
+experimentation/
+  __init__.py       Public grid, sweep, analysis and report-persistence API
+  models.py         Grid factor, metric distribution, delta, variant and report contracts
+  grid.py           Verified M8 user_parameter-only Cartesian grid generation
+  analysis.py       M9 result provenance checks, descriptive aggregation and factor-level comparisons
+  serialization.py  Strict fingerprinted report JSON and CSV export
+  README.md         Public API and CLI usage
+tests/experimentation/
+  test_grid.py       Binding checks, path validation, Cartesian grids and size limits
+  test_analysis.py   Sweep execution, statistics, baseline changes and provenance safeguards
+  test_serialization.py JSON integrity, strict parsing and CSV export
+scenarios/experimentation/README.md - Grid input format and artifact-specific parameter guidance
+M10_ARCHITECTURE.md - Design, execution flow, statistical interpretation and limitations
+MILESTONE10_REPORT.md - M10 implementation summary and scope boundaries
+M10_TEST_REPORT.md - focused test coverage and environment limitations

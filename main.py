@@ -825,6 +825,249 @@ def inspect_execution_result():
     print(f"\nResult integrity verified: {result_path}")
 
 
+
+def run_parameter_sweep_workflow():
+    """Generate a bounded M10 parameter sweep, execute it and analyze results."""
+    import json
+    from pathlib import Path
+    from compilation import load_artifact
+    from execution import ExperimentConfig, execute_artifact, load_result, save_result
+    from experimentation import (
+        GridFactor, analyze_results, export_summary_csv,
+        generate_parameter_grid, save_report,
+    )
+
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs"
+    artifact_candidates = sorted(
+        output_dir.glob("*_m8_*_specification*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+
+    print("\n--- M10: Parameter Sweep and Comparative Analysis ---")
+    if artifact_candidates:
+        print("Recent M8 artifact candidates:")
+        for index, candidate in enumerate(artifact_candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nArtifact number or M8 artifact JSON path: ").strip().strip('"')
+    if not selection:
+        print("No artifact selected.")
+        return
+    if selection.isdigit() and artifact_candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(artifact_candidates)):
+            print("Invalid artifact number.")
+            return
+        artifact_path = artifact_candidates[index - 1]
+    else:
+        artifact_path = Path(selection).expanduser()
+        if not artifact_path.is_absolute():
+            artifact_path = (Path.cwd() / artifact_path).resolve()
+
+    try:
+        artifact = load_artifact(artifact_path)
+    except Exception as error:
+        print(f"Could not load or verify the M8 artifact: {error}")
+        return
+
+    print(f"\nProject: {artifact.project_title}")
+    print(f"Revision: {artifact.revision_id} (v{artifact.revision_version})")
+    print(f"Paradigm: {artifact.paradigm.value} | Backend: {artifact.backend_name}")
+    print("Only M8 fields explicitly declared as user_parameter can be varied.")
+
+    factor_path_text = input("Path to JSON grid-factor file: ").strip().strip('"')
+    if not factor_path_text:
+        print("No grid file selected.")
+        return
+    factor_path = Path(factor_path_text).expanduser()
+    if not factor_path.is_absolute():
+        factor_path = (Path.cwd() / factor_path).resolve()
+    try:
+        raw_factors = json.loads(factor_path.read_text(encoding="utf-8"))
+        if not isinstance(raw_factors, list):
+            raise ValueError("grid-factor JSON must contain a top-level array")
+        factors = tuple(
+            GridFactor(target_path=item["target_path"], levels=tuple(item["levels"]))
+            for item in raw_factors
+        )
+    except Exception as error:
+        print(f"Could not load grid factors: {error}")
+        return
+
+    runs_text = input("Replications per parameter-set variant [1]: ").strip()
+    try:
+        runs = int(runs_text) if runs_text else 1
+    except ValueError:
+        print("Replications must be an integer.")
+        return
+    if not 1 <= runs <= 100:
+        print("Replications must be between 1 and 100.")
+        return
+
+    base_seed = None
+    if artifact.paradigm.value == "agent_based":
+        seed_text = input("Base random seed (blank uses the compiled model seed): ").strip()
+        if seed_text:
+            try:
+                base_seed = int(seed_text)
+                if base_seed < 0:
+                    raise ValueError
+            except ValueError:
+                print("Base seed must be a non-negative integer.")
+                return
+    else:
+        print("DES V1 is deterministic; no seed is used.")
+
+    include_baseline_text = input("Include current compiled model as baseline? [Y/n]: ").strip().lower()
+    include_baseline = include_baseline_text not in {"n", "no"}
+    try:
+        parameter_sets = generate_parameter_grid(
+            artifact, factors, include_baseline=include_baseline,
+            max_variants=100 // runs,
+        )
+        config = ExperimentConfig(
+            runs=runs, base_seed=base_seed, continue_on_error=True,
+            parameter_sets=parameter_sets,
+        )
+    except Exception as error:
+        print(f"Experiment design rejected: {error}")
+        return
+
+    print(f"\nGenerated variants: {len(parameter_sets)}")
+    print(f"Total executions: {config.total_runs}")
+    for variant in parameter_sets:
+        print(f"  {variant.name}: {{" + ", ".join(f"{item.target_path}={item.value!r}" for item in variant.overrides) + "}")
+    confirm = input("Start this experiment? [y/N]: ").strip().lower()
+    if confirm not in {"y", "yes"}:
+        print("Experiment cancelled; no simulation was run.")
+        return
+
+    try:
+        result = execute_artifact(artifact, config)
+    except Exception as error:
+        print(f"Execution setup rejected: {error}")
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result_path = output_dir / f"{artifact.project_id}_m9_sweep_execution.json"
+    version = 2
+    while result_path.exists():
+        result_path = output_dir / f"{artifact.project_id}_m9_sweep_execution_v{version}.json"
+        version += 1
+    save_result(result, result_path)
+    print(f"\nM9 sweep result saved: {result_path}")
+
+    comparison_results = [result]
+    print("\nOptional: add previous M9 result JSON files from this exact M8 artifact for comparison.")
+    print("Enter one path at a time; submit blank when finished.")
+    while True:
+        extra_path_text = input("Additional M9 result path: ").strip().strip('"')
+        if not extra_path_text:
+            break
+        extra_path = Path(extra_path_text).expanduser()
+        if not extra_path.is_absolute():
+            extra_path = (Path.cwd() / extra_path).resolve()
+        try:
+            comparison_results.append(load_result(extra_path))
+            print("Verified and added.")
+        except Exception as error:
+            print(f"Could not add result: {error}")
+
+    baseline_name = "baseline" if include_baseline else None
+    try:
+        report = analyze_results(tuple(comparison_results), baseline_parameter_set=baseline_name)
+    except Exception as error:
+        print(f"The M9 result was saved, but comparative analysis could not be completed: {error}")
+        return
+
+    report_path = output_dir / f"{artifact.project_id}_m10_analysis.json"
+    report_version = 2
+    while report_path.exists():
+        report_path = output_dir / f"{artifact.project_id}_m10_analysis_v{report_version}.json"
+        report_version += 1
+    csv_path = report_path.with_suffix(".csv")
+    save_report(report, report_path)
+    export_summary_csv(report, csv_path)
+
+    print("\n--- M10 Analysis Summary ---")
+    print(f"Analysis ID: {report.analysis_id}")
+    print(f"Baseline parameter set: {report.baseline_parameter_set}")
+    print(f"Variants analyzed: {len(report.variants)}")
+    for variant in report.variants:
+        print(f"\n{variant.parameter_set}: {variant.successful_runs}/{variant.total_runs} successful")
+        if variant.parameters:
+            print(f"  Parameters: {variant.parameters}")
+        for metric in variant.metrics:
+            if metric.value_type == "numeric":
+                print(f"  {metric.metric_name}: mean={metric.mean:.6g}, population SD={metric.population_stddev:.6g}, n={metric.sample_size}")
+            else:
+                counts = {item.value: item.count for item in metric.categories}
+                print(f"  {metric.metric_name}: {counts}")
+        for delta in variant.deltas_vs_baseline:
+            pct = f", {delta.percent_change:.3g}%" if delta.percent_change is not None else ", percent change undefined (baseline mean is zero)"
+            print(f"  Δ {delta.metric_name}: {delta.absolute_change:+.6g}{pct}")
+    for warning in report.warnings:
+        print(f"\nAnalysis note: {warning}")
+    print(f"\nM10 analysis JSON: {report_path}")
+    print(f"M10 summary CSV: {csv_path}")
+    print("These are descriptive model outcomes, not proof that the model represents the real world.")
+
+
+def inspect_analysis_report():
+    """Inspect a saved, integrity-verified M10 analysis report."""
+    from pathlib import Path
+    from experimentation import load_report
+
+    output_dir = Path(__file__).resolve().parent / "outputs"
+    candidates = sorted(
+        output_dir.glob("*_m10_analysis*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+    print("\n--- Inspect M10 Comparative Analysis ---")
+    if candidates:
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nAnalysis number or M10 JSON path: ").strip().strip('"')
+    if not selection:
+        print("No analysis selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid analysis number.")
+            return
+        report_path = candidates[index - 1]
+    else:
+        report_path = Path(selection).expanduser()
+        if not report_path.is_absolute():
+            report_path = (Path.cwd() / report_path).resolve()
+    try:
+        report = load_report(report_path)
+    except Exception as error:
+        print(f"Could not load or verify the M10 report: {error}")
+        return
+
+    print(f"\nProject: {report.project_title}")
+    print(f"Revision: {report.revision_id} (v{report.revision_version})")
+    print(f"Paradigm: {report.paradigm} | Backend: {report.backend_name}")
+    print(f"Baseline: {report.baseline_parameter_set}")
+    print(f"Source M8 artifact: {report.artifact_id}")
+    print(f"M9 experiments included: {len(report.input_experiment_ids)}")
+    for variant in report.variants:
+        print(f"\n{variant.parameter_set}: {variant.successful_runs}/{variant.total_runs} successful")
+        for metric in variant.metrics:
+            if metric.value_type == "numeric":
+                print(f"  {metric.metric_name}: mean={metric.mean:.6g}, SD={metric.population_stddev:.6g}, median={metric.median:.6g}, min={metric.minimum:.6g}, max={metric.maximum:.6g}")
+            else:
+                print(f"  {metric.metric_name}: " + ", ".join(f"{item.value!r}: {item.count}" for item in metric.categories))
+        for delta in variant.deltas_vs_baseline:
+            print(f"  Δ {delta.metric_name}: {delta.absolute_change:+.6g}")
+    for warning in report.warnings:
+        print(f"\nAnalysis note: {warning}")
+    print(f"\nReport integrity verified: {report_path}")
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
@@ -838,8 +1081,10 @@ def main():
     print("8. Compile a conceptual revision into an executable specification")
     print("9. Execute a compiled specification and save experiment results")
     print("10. Inspect a saved experiment result")
+    print("11. Design and run a parameter sweep; compare M9 results")
+    print("12. Inspect a saved M10 comparative analysis")
 
-    choice = input("\nChoose an option (1-10): ").strip()
+    choice = input("\nChoose an option (1-12): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -861,8 +1106,12 @@ def main():
         run_execution_workflow()
     elif choice == "10":
         inspect_execution_result()
+    elif choice == "11":
+        run_parameter_sweep_workflow()
+    elif choice == "12":
+        inspect_analysis_report()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 10.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 12.")
 
 
 if __name__ == "__main__":
