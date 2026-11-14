@@ -72,7 +72,10 @@ def _estimate_trace_records(artifact: CompilationArtifact, model_data: dict[str,
             stages = job.get("stages")
             stage_count += len(stages) if stages else 1
         entity_count = len(data.get("jobs", []))
-        return stage_count * 3 + entity_count + len(data.get("resources", []))
+        # M19 stores the canonical events plus a derived replay projection.
+        # Budget for duplicated timeline/stages, queue intervals and occupancy.
+        resource_count = len(data.get("resources", []))
+        return stage_count * 12 + entity_count * 2 + resource_count * 3
     return 0
 
 
@@ -266,7 +269,18 @@ def _capture_trace(native_result: Any, paradigm: CompilationParadigm) -> dict[st
             }
             for item in native_result.resource_metrics
         ]
-        return _json_safe({"events": events, "entities": entities, "resources": resources})
+        from simulations.des.replay import build_des_replay
+        capacities = dict(getattr(native_result, "resource_capacities", ()))
+        if not capacities:
+            capacities = {item.resource_name: 1 for item in native_result.resource_metrics}
+        replay = build_des_replay(native_result.events, resource_capacities=capacities)
+        return _json_safe({
+            "events": events,
+            "entities": entities,
+            "resources": resources,
+            "resource_capacities": capacities,
+            "replay": replay,
+        })
 
     raise ValueError(f"No trace serializer for {paradigm.value}")
 

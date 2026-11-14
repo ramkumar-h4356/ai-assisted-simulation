@@ -14,6 +14,7 @@ An extensible Python platform for helping people formalize, inspect and explore 
 - M16 spatial ABM extension: explicit 2D world dimensions, per-agent coordinates, clamp/wrap boundaries, relative/absolute movement actions, Euclidean neighbourhood conditions, position-recording M9 traces, and spatial replay in the browser.
 - M17 advanced spatial mechanics: static rectangular/circular obstacles, circular agent bodies, agent/agent collision checks, deterministic block/slide movement resolution, cumulative per-step movement budgets, bounded direct/A* navigation, and persisted movement-event traces.
 - M18 spatial environments: uniform world grids, polygon regions and navigation zones, environmental objects with collision footprints, weighted/impassable terrain routing, and a spatial hash index for efficient live neighbourhood queries.
+- M19 DES replay: stable event timelines, per-entity multi-stage journeys, queue-length and wait intervals, resource occupancy/utilization, event/entity/resource inspection helpers, and provenance-checked replay from saved M9 runs.
 - AI-assisted idea interpretation, bounded clarification, uncertainty retention and element-level provenance (M6).
 - Deterministic M8 compilation profiles that bind target-model fields to exact conceptual elements or explicitly documented experiment parameters, then validate against the real DES/ABM model schemas.
 - M9 controlled execution of integrity-verified M8 artifacts, reproducible seeded ABM runs, deterministic DES runs, native trace capture, failure records and integrity-checked experiment-result persistence.
@@ -45,10 +46,10 @@ uncertainty/     M11 Monte Carlo input sampling, sensitivity screening and robus
 visualization/   M12 engine-independent dashboard data, trace adapters, JSON integrity and standalone HTML rendering
 workbench/      M13 project workspaces, artifact validation, provenance, orchestration, extension registry and CLI
 webapp/         M14 local FastAPI service and browser UI for the integrated project lifecycle
-simulation_studio/ M15/M16 trace-backed 2D ABM replay scenes with recorded spatial coordinates and M17 movement-event details
+simulation_studio/ M15/M16 trace-backed 2D ABM replay plus M19 provenance-checked DES run replay
 simulations/
   core/          Shared specification and backend contracts
-  des/           Discrete-event models, AI workflow, validation and execution
+  des/           Discrete-event models, AI workflow, validation, execution and M19 trace replay
   abm/           ABM model contract, AI construction, validation, execution and backend
   mathematical/ Equation-to-Simulation (planned)
   data_driven/   Dataset-to-Simulation (planned)
@@ -62,6 +63,7 @@ tests/
   readiness/     M7 paradigm-fit, readiness, clarification and report-persistence tests
   compilation/   M8 profile provenance, native-model validation, compilation gates and artifact integrity tests
   execution/     M9 seeded execution, trace capture, bounded failures and result integrity tests
+  simulation_studio/ M15/M16 ABM replay and M19 DES replay, event inspection and provenance checks
   experimentation/ M10 grid generation, provenance-safe analysis, statistics and report-integrity tests
   uncertainty/    M11 distribution sampling, M9 execution checks, sensitivity, robustness and report-integrity tests
   visualization/ M12 DES/ABM trace adapters, cross-milestone provenance, dashboard rendering and bundle-integrity tests
@@ -129,6 +131,15 @@ If no profile path is supplied, option 8 creates an intentionally incomplete JSO
 Choose option 9 to load an integrity-checked M8 specification artifact and execute it through its implemented backend. The workflow accepts named parameter sets (optional JSON input) and replications per set, with at most 100 total executions. A parameter can vary only when its exact target path is already documented as an M8 `user_parameter`; conceptual bindings cannot be overwritten. ABM runs receive consecutive random seeds, while DES V1 is deterministic and does not consume random seeds. M9 captures full DES event logs or ABM state/rule histories alongside metrics. Option 10 inspects a saved experiment result.
 
 Every M9 result records the M8 artifact ID and fingerprint, project ID, exact conceptual revision, paradigm, backend, run seeds and timestamps. Failed runs are saved with bounded error details; successful runs retain machine-readable traces. Result JSON is fingerprinted and verified when loaded. A 500,000-record estimated trace budget bounds output size. See `execution/README.md`, `M9_ARCHITECTURE.md`, `MILESTONE9_REPORT.md` and `M9_TEST_REPORT.md`.
+
+
+## Discrete-event simulation replay (M19)
+
+M19 derives a replay projection from the canonical event log already recorded by the DES engine. The timeline keeps the original event order and provides a stable sequence number. Each entity gains an ordered stage journey with arrival, service-start, completion, queue-wait and service-time values. Each resource gains occupancy intervals, peak concurrency, queue intervals, queue-length intervals, peak queue length and utilization normalized by capacity and the observed simulation horizon.
+
+The M9 DES trace now stores `resource_capacities` and a `replay` object while retaining the existing `events`, `entities` and `resources` fields. The execution result fingerprint covers the additional data. `simulation_studio.build_des_run_replay(result, compilation, run_index=1)` validates the M8/M9 fingerprints and project/revision lineage, then recomputes the projection from the canonical event log. The lower-level inspection helpers `query_des_events`, `get_des_event`, `get_entity_journey` and `get_resource_replay` are available from `simulations.des.replay`.
+
+Replay is post-run, not a live or animated simulation. The current DES runtime records arrivals, service starts and completions only; cancellation, preemption and arbitrary custom event types are not yet part of the replay contract. See `M19_ARCHITECTURE.md`, `M19_TEST_REPORT.md` and `scenarios/des/two_stage_clinic_replay.json`.
 
 
 ## Experiment design and comparative analysis (M10)

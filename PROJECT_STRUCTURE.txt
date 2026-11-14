@@ -308,3 +308,24 @@ M18_ARCHITECTURE.md       Spatial environment and routing architecture
 MILESTONE18_REPORT.md     Milestone 18 delivery report
 M18_TEST_REPORT.md        M18 verification record
 M18_APPLY_STEPS.txt       Windows update and verification steps
+
+
+Milestone 19 additions:
+simulations/des/
+  replay.py               Canonical event validation, timeline, entity journeys, queue and resource replay projections, and inspection helpers
+  replay_demo.py          End-to-end console demonstration using the two-stage clinic scenario
+  README.md               DES replay API, example usage, saved M9 replay and limitations
+simulation_studio/
+  des_replay.py           M8/M9 fingerprint and project/revision provenance checks for saved DES run replay
+  __init__.py              Exports both ABM and DES replay entry points
+execution/runner.py       M19 DES replay capture, capacity persistence and expanded trace-budget estimate
+tests/des/
+  test_replay.py           Event ordering, journey reconstruction, utilization, queues, capacity, zero-duration and inspection tests
+tests/simulation_studio/
+  test_des_replay.py       M9 trace projection, saved-run lineage, legacy trace and tamper-detection tests
+scenarios/des/
+  two_stage_clinic_replay.json  Three-patient, two-resource example with queues at both service stages
+M19_ARCHITECTURE.md       Replay data model, integration, ordering semantics and limitations
+MILESTONE19_REPORT.md     M19 implementation summary and verification boundary
+M19_TEST_REPORT.md        M19 focused test scope and required Windows verification
+M19_APPLY_STEPS.txt       Instructions for updating and testing an existing repository

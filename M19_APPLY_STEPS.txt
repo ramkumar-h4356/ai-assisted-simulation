@@ -1,0 +1,29 @@
+M19 — DISCRETE-EVENT SIMULATION REPLAY
+
+Use M19_Updates.zip to update your existing repository. Do not replace your
+entire project folder with the full snapshot unless you intentionally want to.
+
+1. Back up your current repository or ensure your M18 commit is safely stored.
+2. Copy M19_Updates.zip into the repository folder and run:
+
+   Expand-Archive -LiteralPath .\M19_Updates.zip -DestinationPath . -Force
+
+   Allow the new files to merge and the updated files to be replaced.
+3. Open PowerShell in the repository and activate the project's virtual environment.
+4. Run the focused tests:
+
+   python -m pytest -q tests/des/test_replay.py
+   python -m pytest -q tests/simulation_studio/test_des_replay.py
+
+5. Run the complete suite:
+
+   python -m pytest -q
+
+6. Send the focused and full test outputs for review before committing.
+
+The full snapshot simulator_real_reorganized_M19.zip is provided separately
+for reference or a clean installation. Do not extract the full snapshot over
+your active repository as the normal update procedure.
+
+M19 does not redesign the UI. The persisted replay is available in the M9 DES
+run trace, and Python inspection helpers are exported through simulation_studio.

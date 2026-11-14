@@ -29,6 +29,7 @@ class ScenarioResult:
     completion_time: float
     resource_metrics: tuple[ResourceMetrics, ...]
     events: tuple[SimulationEvent, ...] = ()
+    resource_capacities: tuple[tuple[str, int], ...] = ()
 
 def run_scenario(scenario: Scenario) -> ScenarioResult:
     """Run a scenario and calculate its performance metrics."""
@@ -79,6 +80,7 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
         completion_time=completion_time,
         resource_metrics=tuple(resource_metrics),
         events=tuple(events),
+        resource_capacities=tuple(sorted(engine.resource_capacities.items())),
     )
 
 def compare_scenarios(

@@ -1,0 +1,33 @@
+{
+  "name": "Two-stage clinic queue replay",
+  "resources": [
+    {"name": "Registration", "capacity": 1},
+    {"name": "Consultation", "capacity": 1}
+  ],
+  "jobs": [
+    {
+      "entity_id": "Patient-A",
+      "arrival_time": 0,
+      "stages": [
+        {"resource_name": "Registration", "service_duration": 4},
+        {"resource_name": "Consultation", "service_duration": 3}
+      ]
+    },
+    {
+      "entity_id": "Patient-B",
+      "arrival_time": 1,
+      "stages": [
+        {"resource_name": "Registration", "service_duration": 2},
+        {"resource_name": "Consultation", "service_duration": 2}
+      ]
+    },
+    {
+      "entity_id": "Patient-C",
+      "arrival_time": 2,
+      "stages": [
+        {"resource_name": "Registration", "service_duration": 1},
+        {"resource_name": "Consultation", "service_duration": 1}
+      ]
+    }
+  ]
+}
