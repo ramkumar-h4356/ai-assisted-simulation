@@ -1,48 +1,139 @@
-# M7 — Simulation Readiness Assessment
+# M8 — Conceptual-to-Executable Specification Compilation
 
-The `readiness/` package evaluates a saved M4/M6 conceptual project without changing it or requiring an LLM. It provides four transparent evaluators:
+M8 creates a deterministic and traceable boundary between an M4 conceptual
+revision and the executable model families: DES V1, ABM V1 and Mathematical V1.
 
-- **Discrete-event simulation (DES):** event/process stages, resources, triggers, time semantics and operational event rules.
-- **Agent-based modelling (ABM):** agent-like entities, interactions, attributes/states and operational behaviours.
-- **Mathematical simulation:** numeric variables, quantitative relationships, equations and explicit update rules.
-- **Data-driven modelling:** dataset references, measurable fields and temporal/ordered observations.
+## The key design decision
 
-Each evaluation includes a qualitative fit (`strong_fit`, `possible_fit`, `insufficient_information`, `poor_fit`), traceable supporting findings, limitations, missing requirements and current backend availability. No arbitrary confidence percentages are generated.
+M8 does **not** guess runtime semantics from natural-language descriptions.
+Concepts and mechanisms describe what a user means; they do not automatically
+specify concrete simulated instances, initial states, numeric parameters,
+service durations, agent update rules, or stopping conditions.
 
-## Use
+A user-approved `CompilationProfile` supplies:
+
+1. The exact project and conceptual revision IDs it was prepared for.
+2. The selected executable paradigm (`discrete_event`, `agent_based` or `mathematical`).
+3. A native target `model_data` object using the existing target schema.
+4. `ElementBinding` records that trace target-model paths to conceptual element
+   IDs, or explain a user-specified experiment parameter.
+
+The compiler then checks the M7 implementation-planning gate, verifies the
+revision and all provenance references, parses the actual native model, and
+runs paradigm-specific validation. Mathematical profiles use the M20 ODE model schema and bind at least one quantitative relationship or operational mechanism to a governing equation. Only then does it produce a portable
+`CompilationArtifact` plus a native `SimulationSpecification`.
+
+## Profile format
+
+```json
+{
+  "profile_id": "queue-des-example",
+  "project_id": "idea-project-id",
+  "revision_id": "idea-revision-id",
+  "paradigm": "discrete_event",
+  "model_data": {
+    "name": "Queue example",
+    "resources": [{"name": "Machine", "capacity": 1}],
+    "jobs": [{
+      "entity_id": "job-1",
+      "arrival_time": 0,
+      "stages": [{"resource_name": "Machine", "service_duration": 5}]
+    }]
+  },
+  "bindings": [
+    {
+      "target_path": "resources[0]",
+      "source": "conceptual_element",
+      "element_ids": ["machine"],
+      "note": "The target resource represents the conceptual machine."
+    },
+    {
+      "target_path": "jobs[0].stages[0]",
+      "source": "conceptual_element",
+      "element_ids": ["service-mechanism"],
+      "note": "The stage operationalizes the service mechanism."
+    },
+    {
+      "target_path": "jobs[0].stages[0].service_duration",
+      "source": "user_parameter",
+      "element_ids": [],
+      "note": "Illustrative experiment parameter: 5 time units; not empirical evidence."
+    }
+  ]
+}
+```
+
+`target_path` uses dotted object keys and numeric list indexes, for example
+`agents[0].attributes.trust` or `behaviours[0]`. Wildcards are intentionally
+not accepted. Each target path can have one binding. For conceptual bindings,
+every element ID must exist in the exact current revision. User parameters
+must include a note stating their experimental meaning. They are not
+silently promoted to facts in the conceptual theory.
+
+At least one binding must reference a conceptual element and at least one
+must reference a mechanism. Unmapped concepts/mechanisms are reported as
+warnings so users can intentionally scope an experiment to only part of a
+theory without silently losing traceability.
+
+## Supported target schemas
+
+### DES V1
+
+`model_data` must pass `simulations.des.schema.scenario_from_dict`. It needs a
+scenario name, resources with positive integer capacities, and jobs with
+non-negative arrival times and stages referencing known resources. Every job
+must have one or more service stages.
+
+### ABM V1
+
+`model_data` must pass `simulations.abm.schema.agent_model_from_dict` and
+`simulations.abm.validation.validate_agent_model`. V1 supports finite scalar
+attributes, static relationships, declarative conditions/actions, sequential
+activation in declaration order, and `max_steps` termination. Unsupported
+behaviour or scheduling semantics must not be smuggled into this schema.
+
+Data-driven remains M7 assessment-only; M8 refuses
+to compile them until corresponding execution backends exist.
+
+## API
 
 ```python
 from conceptual import load_idea_project
-from readiness import assess_readiness, Paradigm, save_report
+from compilation import compile_profile, load_profile, save_artifact
 
-project = load_idea_project("outputs/my_idea.json")
-report = assess_readiness(project)
-print(report.status.value)
-for assessment in report.paradigm_assessments:
-    print(assessment.paradigm.value, assessment.fit.value)
+project = load_idea_project("outputs/my_idea_m6_idea.json")
+profile = load_profile("profiles/my_idea_des.json")
+result = compile_profile(project, profile)
 
-# Optional: test a user-selected direction for implementation-planning readiness.
-selected_report = assess_readiness(project, selected_paradigm=Paradigm.AGENT_BASED)
-save_report(selected_report, "outputs/my_idea_m7_readiness.json")
+if not result.is_ready:
+    for issue in result.errors:
+        print(issue.code, issue.path, issue.message)
+else:
+    save_artifact(result.artifact, "outputs/my_idea_m8_specification.json")
+    # result.native_specification is ready for the later execution milestone.
+    # M8 deliberately does not execute it.
 ```
 
-Or run the included example:
+## M7 readiness gate
 
-```powershell
-python -m readiness.demo
-```
+The selected paradigm must reach
+`READY_FOR_IMPLEMENTATION_PLANNING` in M7. The paradigm must also have an
+implemented backend. A merely possible fit, unresolved blocking question,
+non-operational mechanism, stale profile revision, or assessment-only
+paradigm blocks compilation.
 
-## Readiness statuses
+## Artifact integrity
 
-- `not_assessable`: structural validation errors must be resolved.
-- `needs_clarification`: key definitions, rules or blocking questions remain incomplete.
-- `ready_for_evaluation`: enough structure exists to compare paradigms; this is not execution readiness.
-- `ready_for_implementation_planning`: a selected, implemented paradigm has a strong fit and its assessed requirements are operationalized. This is permission to begin detailed implementation planning, not a claim that the model is validated or executable.
+The saved artifact records project/revision identity, target paradigm, backend
+name, the M7 readiness/fit decision, exact validated target model data, provenance
+bindings, a SHA-256 model fingerprint over the paradigm plus model data, and a
+whole-artifact integrity fingerprint over metadata and bindings. `load_artifact`
+recomputes both fingerprints and rejects altered model or provenance content. The artifact is a specification, not a
+simulation result and not evidence that the conceptual theory is true.
 
-## Backend availability
+## Scope boundary
 
-DES and ABM are marked `implemented` because their model and execution packages exist in this project. Mathematical and data-driven are marked `assessment_only`; M7 can evaluate conceptual suitability but those execution engines have not been delivered. For data-driven ideas, a dataset citation is not proof that the underlying file is accessible or has been profiled.
-
-## Boundaries
-
-M7 is deterministic and does not alter the `IdeaProject`, append a revision, retrieve evidence, or call an LLM. It is a transparent rule-based screening tool, not a scientific peer reviewer. Fit labels are qualitative rule outcomes, not probabilities or confidence scores. The report records the exact project revision it assessed. After changing the idea, run a new assessment against the new revision.
+M8 validates and compiles specifications; it does not run the DES or ABM
+backend, choose experimental parameters, create agent populations, infer
+behaviour rules, or train an ML model. Those decisions require explicit user
+input or a separately evaluated milestone.

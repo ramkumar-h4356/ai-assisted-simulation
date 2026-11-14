@@ -8,8 +8,8 @@ from readiness.models import ReadinessStatus
 from simulations.abm.model import AgentModel
 from simulations.core.specification import SimulationParadigm, SimulationSpecification
 from simulations.des.model import Scenario
-from tests.compilation.helpers import abm_profile, des_profile
-from tests.readiness.helpers import abm_project, des_project
+from tests.compilation.helpers import abm_profile, des_profile, mathematical_profile
+from tests.readiness.helpers import abm_project, des_project, mathematical_project
 
 
 def codes(result):
@@ -59,12 +59,11 @@ def test_rejects_profile_for_different_project():
     assert "M8_PROJECT_MISMATCH" in codes(result)
 
 
-def test_rejects_assessment_only_mathematical_backend():
-    project = des_project()
-    profile = replace(des_profile(project), paradigm=CompilationParadigm.MATHEMATICAL)
-    result = compile_profile(project, profile)
-    assert not result.is_ready
-    assert "M8_BACKEND_NOT_IMPLEMENTED" in codes(result)
+def test_compiles_mathematical_profile_after_m20_backend_delivery():
+    project = mathematical_project()
+    result = compile_profile(project, mathematical_profile(project))
+    assert result.is_ready, result.issues
+    assert result.artifact.paradigm is CompilationParadigm.MATHEMATICAL
 
 
 def test_blocks_when_m7_readiness_gate_is_not_met():

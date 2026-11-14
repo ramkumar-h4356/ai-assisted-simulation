@@ -1,4 +1,4 @@
-"""Controlled extension contract for future simulation paradigms (M13)."""
+"""Controlled extension contract and built-in DES/ABM/math adapters (M13/M20)."""
 
 from __future__ import annotations
 
@@ -142,7 +142,7 @@ class BuiltInParadigmAdapter:
 
 
 def create_builtin_registry() -> ExtensionRegistry:
-    """Return a registry containing the existing, executable DES and ABM adapters."""
+    """Return a registry containing the executable DES, ABM and mathematical adapters."""
     from compilation import CompilationParadigm
     from readiness import Paradigm
 
@@ -162,5 +162,13 @@ def create_builtin_registry() -> ExtensionRegistry:
             model_schema_versions=("m8-abm-v1",),
             capabilities=("validate", "compile", "execute", "serialize_result", "validate_result"),
         ), CompilationParadigm.AGENT_BASED, Paradigm.AGENT_BASED,
+    ))
+    registry.register(BuiltInParadigmAdapter(
+        ExtensionDescriptor(
+            extension_id="builtin.mathematical.v1", display_name="Mathematical simulation (ODE)",
+            version="1.0.0", paradigm="mathematical",
+            model_schema_versions=("m8-mathematical-v1",),
+            capabilities=("validate", "compile", "execute", "serialize_result", "validate_result"),
+        ), CompilationParadigm.MATHEMATICAL, Paradigm.MATHEMATICAL,
     ))
     return registry

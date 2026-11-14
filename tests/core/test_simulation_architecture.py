@@ -119,3 +119,9 @@ def test_backend_executes_specification():
     assert result.backend_name == "Fake DES Backend"
     assert result.metrics[0].value == 10
     assert result.native_result == {"events": 5}
+
+def test_mathematical_paradigm_is_available_in_common_simulation_contract():
+    specification = SimulationSpecification(
+        "ODE model", SimulationParadigm.MATHEMATICAL, {"variables": []}
+    )
+    assert specification.paradigm is SimulationParadigm.MATHEMATICAL

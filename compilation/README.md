@@ -1,8 +1,7 @@
 # M8 — Conceptual-to-Executable Specification Compilation
 
 M8 creates a deterministic and traceable boundary between an M4 conceptual
-revision and the two executable model families that currently exist: DES V1
-and ABM V1.
+revision and the executable model families: DES V1, ABM V1 and Mathematical V1.
 
 ## The key design decision
 
@@ -14,14 +13,14 @@ service durations, agent update rules, or stopping conditions.
 A user-approved `CompilationProfile` supplies:
 
 1. The exact project and conceptual revision IDs it was prepared for.
-2. The selected executable paradigm (`discrete_event` or `agent_based`).
+2. The selected executable paradigm (`discrete_event`, `agent_based` or `mathematical`).
 3. A native target `model_data` object using the existing target schema.
 4. `ElementBinding` records that trace target-model paths to conceptual element
    IDs, or explain a user-specified experiment parameter.
 
 The compiler then checks the M7 implementation-planning gate, verifies the
-revision and all provenance references, parses the actual DES/ABM model, and
-runs ABM semantic validation. Only then does it produce a portable
+revision and all provenance references, parses the actual native model, and
+runs paradigm-specific validation. Mathematical profiles use the M20 ODE model schema and bind at least one quantitative relationship or operational mechanism to a governing equation. Only then does it produce a portable
 `CompilationArtifact` plus a native `SimulationSpecification`.
 
 ## Profile format
@@ -71,10 +70,11 @@ every element ID must exist in the exact current revision. User parameters
 must include a note stating their experimental meaning. They are not
 silently promoted to facts in the conceptual theory.
 
-At least one binding must reference a conceptual element and at least one
-must reference a mechanism. Unmapped concepts/mechanisms are reported as
-warnings so users can intentionally scope an experiment to only part of a
-theory without silently losing traceability.
+At least one binding must reference a conceptual element. DES/ABM profiles must
+also bind an operational mechanism; mathematical profiles may instead bind an
+explicit quantitative relationship to a governing equation. Unmapped
+concepts/mechanisms are reported as warnings so users can intentionally scope
+an experiment to only part of a theory without silently losing traceability.
 
 ## Supported target schemas
 
@@ -93,7 +93,7 @@ attributes, static relationships, declarative conditions/actions, sequential
 activation in declaration order, and `max_steps` termination. Unsupported
 behaviour or scheduling semantics must not be smuggled into this schema.
 
-Mathematical and data-driven paradigms remain M7 assessment-only; M8 refuses
+Data-driven remains M7 assessment-only; M8 refuses
 to compile them until corresponding execution backends exist.
 
 ## API
@@ -134,7 +134,7 @@ simulation result and not evidence that the conceptual theory is true.
 
 ## Scope boundary
 
-M8 validates and compiles specifications; it does not run the DES or ABM
-backend, choose experimental parameters, create agent populations, infer
-behaviour rules, or train an ML model. Those decisions require explicit user
-input or a separately evaluated milestone.
+M8 validates and compiles specifications; it does not run the DES, ABM or
+mathematical backend, choose experimental parameters, create agent populations,
+infer behaviour rules, infer equations from prose, or train an ML model. Those
+decisions require explicit user input or a separately evaluated milestone.

@@ -329,3 +329,24 @@ M19_ARCHITECTURE.md       Replay data model, integration, ordering semantics and
 MILESTONE19_REPORT.md     M19 implementation summary and verification boundary
 M19_TEST_REPORT.md        M19 focused test scope and required Windows verification
 M19_APPLY_STEPS.txt       Instructions for updating and testing an existing repository
+
+
+Milestone 20 additions:
+simulations/mathematical/
+  model.py                  Strict M20 ODE schema, numeric and identifier checks, safe expression AST validation
+  backend.py                Deterministic Euler, Heun and RK4 integrators for coupled ODE systems
+  demo.py                   Console runner for the SIR example
+  README.md                 Model format, expression allow-list, solver semantics and limitations
+scenarios/mathematical/
+  sir_rk4.json              Illustrative SIR system with RK4 integration
+tests/mathematical/
+  test_model_and_backend.py ODE validation, safe expression, accuracy, coupled state and numerical failure tests
+tests/compilation/
+  test_mathematical_compilation.py  M7/M8 math readiness, quantitative relationship provenance and model validation tests
+tests/execution/
+  test_mathematical_execution.py    M9 math artifact execution, time-series traces, parameter overrides and integrity round trips
+workbench/extensions.py    Built-in Mathematical V1 lifecycle adapter in the controlled extension registry
+M20_ARCHITECTURE.md        Mathematical model, safe expression and integration architecture
+MILESTONE20_REPORT.md      M20 implementation summary and scope boundaries
+M20_TEST_REPORT.md        Focused test results and full-suite environment limitation
+M20_APPLY_STEPS.txt       Windows update and verification commands

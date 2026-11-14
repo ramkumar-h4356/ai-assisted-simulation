@@ -11,6 +11,7 @@ class SimulationParadigm(Enum):
     AGENT_BASED = "agent_based"
     SYSTEM_DYNAMICS = "system_dynamics"
     CONTINUOUS = "continuous"
+    MATHEMATICAL = "mathematical"
     MONTE_CARLO = "monte_carlo"
 
 @dataclass(frozen=True, slots=True)

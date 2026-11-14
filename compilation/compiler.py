@@ -1,4 +1,4 @@
-"""Deterministic, provenance-aware compilation into existing DES and ABM models.
+"""Deterministic, provenance-aware compilation into supported DES, ABM and math models.
 
 M8 deliberately requires an explicit CompilationProfile. It does not convert
 natural-language descriptions into operational semantics or invent parameter
@@ -32,10 +32,12 @@ from compilation.models import (
 _BACKEND_NAMES = {
     CompilationParadigm.DISCRETE_EVENT: "DES V1 / SimPy backend",
     CompilationParadigm.AGENT_BASED: "ABM V1 backend",
+    CompilationParadigm.MATHEMATICAL: "Mathematical V1 / Fixed-Step ODE backend",
 }
 _SIMULATION_PARADIGMS = {
     CompilationParadigm.DISCRETE_EVENT: SimulationParadigm.DISCRETE_EVENT,
     CompilationParadigm.AGENT_BASED: SimulationParadigm.AGENT_BASED,
+    CompilationParadigm.MATHEMATICAL: SimulationParadigm.MATHEMATICAL,
 }
 _READINESS_PARADIGMS = {
     CompilationParadigm.DISCRETE_EVENT: Paradigm.DISCRETE_EVENT,
@@ -145,6 +147,7 @@ def _validate_bindings(project: IdeaProject, profile: CompilationProfile) -> lis
     source_ids = _source_element_ids(project)
     concept_ids = _source_concept_ids(project)
     seen_mechanisms: set[str] = set()
+    seen_relationships: set[str] = set()
     bound_concepts: set[str] = set()
     conceptual_binding_count = 0
 
@@ -162,11 +165,19 @@ def _validate_bindings(project: IdeaProject, profile: CompilationProfile) -> lis
                     bound_concepts.add(element_id)
                 if any(item.id == element_id for item in project.current_revision.mechanisms):
                     seen_mechanisms.add(element_id)
+                if any(item.id == element_id for item in project.current_revision.relationships):
+                    seen_relationships.add(element_id)
 
     if conceptual_binding_count == 0:
         issues.append(_issue("M8_NO_CONCEPTUAL_BINDINGS", "bindings", "At least one target field must be traceably bound to a conceptual element."))
-    if not seen_mechanisms:
-        issues.append(_issue("M8_NO_MECHANISM_BINDING", "bindings", "At least one operational mechanism must be bound to a target-model field or subtree. This prevents compiling only nouns while losing the theory's causal rules."))
+    has_governing_binding = bool(seen_mechanisms) or (
+        profile.paradigm is CompilationParadigm.MATHEMATICAL and bool(seen_relationships)
+    )
+    if not has_governing_binding:
+        if profile.paradigm is CompilationParadigm.MATHEMATICAL:
+            issues.append(_issue("M8_NO_GOVERNING_RELATION_BINDING", "bindings", "At least one quantitative relationship or operational mechanism must be bound to a governing equation."))
+        else:
+            issues.append(_issue("M8_NO_MECHANISM_BINDING", "bindings", "At least one operational mechanism must be bound to a target-model field or subtree. This prevents compiling only nouns while losing the theory's causal rules."))
     for concept in project.current_revision.concepts:
         if concept.id not in bound_concepts:
             issues.append(_issue("M8_UNMAPPED_CONCEPT", "bindings", f"Concept {concept.name!r} ({concept.id}) is not mapped into this target profile.", severity=IssueSeverity.WARNING, element_ids=(concept.id,)))
@@ -177,10 +188,10 @@ def _validate_bindings(project: IdeaProject, profile: CompilationProfile) -> lis
 
 
 def compile_profile(project: IdeaProject, profile: CompilationProfile) -> CompilationResult:
-    """Validate and compile an explicit profile into DES or ABM native model.
+    """Validate and compile an explicit profile into a supported native model.
 
     No backend is executed. A valid result contains a SimulationSpecification
-    whose model has already passed the actual target paradigm validator.
+    whose model has already passed the actual target-paradigm validator.
     """
     if not isinstance(project, IdeaProject):
         raise TypeError("project must be an IdeaProject")
@@ -194,7 +205,7 @@ def compile_profile(project: IdeaProject, profile: CompilationProfile) -> Compil
     if profile.revision_id != revision.id:
         issues.append(_issue("M8_STALE_REVISION", "revision_id", "Compilation profile targets a different revision. Rebuild or review the profile against the current revision."))
     if profile.paradigm not in _BACKEND_NAMES:
-        issues.append(_issue("M8_BACKEND_NOT_IMPLEMENTED", "paradigm", f"No executable compiler/backend is implemented for {profile.paradigm.value}. M7 can assess it, but M8 supports only DES and ABM."))
+        issues.append(_issue("M8_BACKEND_NOT_IMPLEMENTED", "paradigm", f"No executable compiler/backend is implemented for {profile.paradigm.value}."))
         return CompilationResult(None, None, tuple(issues))
 
     readiness = assess_readiness(project, selected_paradigm=_READINESS_PARADIGMS[profile.paradigm])
@@ -212,7 +223,7 @@ def compile_profile(project: IdeaProject, profile: CompilationProfile) -> Compil
         if profile.paradigm is CompilationParadigm.DISCRETE_EVENT:
             model_data = json.loads(json.dumps(profile.model_data, ensure_ascii=False, allow_nan=False))
             native_model = scenario_from_dict(model_data)
-        else:
+        elif profile.paradigm is CompilationParadigm.AGENT_BASED:
             model_data = normalize_agent_model_data(profile.model_data)
             native_model = agent_model_from_dict(model_data)
             validation = validate_agent_model(native_model)
@@ -222,6 +233,10 @@ def compile_profile(project: IdeaProject, profile: CompilationProfile) -> Compil
                 issues.append(_issue(item.code, item.path, item.message, severity=IssueSeverity.WARNING))
             if validation.errors:
                 return CompilationResult(None, None, tuple(issues))
+        else:
+            from simulations.mathematical.model import mathematical_model_from_dict
+            model_data = json.loads(json.dumps(profile.model_data, ensure_ascii=False, allow_nan=False))
+            native_model = mathematical_model_from_dict(model_data)
     except Exception as error:
         path = getattr(error, "path", "model_data")
         issues.append(_issue("M8_TARGET_MODEL_INVALID", str(path), str(error)))
@@ -317,8 +332,20 @@ def create_profile_template(project: IdeaProject, paradigm: CompilationParadigm)
             "termination": {"type": "max_steps", "value": None},
             "random_seed": None,
         }
+    elif paradigm is CompilationParadigm.MATHEMATICAL:
+        model_data = {
+            "schema_version": 1,
+            "name": project.title,
+            "time": {"start": 0.0, "end": 10.0, "step": 0.1, "unit": "time units"},
+            "solver": "rk4",
+            "variables": [
+                {"name": "variable_one", "initial_value": 1.0, "derivative": "0.0", "unit": "units"},
+                {"name": "variable_two", "initial_value": 1.0, "derivative": "0.0", "unit": "units"},
+            ],
+            "parameters": [],
+        }
     else:
-        raise ValueError("M8 templates are available only for executable DES and ABM paradigms")
+        raise ValueError("No M8 profile template exists for this paradigm")
     return {
         "profile_id": f"{project.id}-{paradigm.value}-profile",
         "project_id": project.id,

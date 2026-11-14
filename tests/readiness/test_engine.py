@@ -19,7 +19,7 @@ def test_evaluates_all_four_paradigms_and_reports_backend_availability():
     assert {item.paradigm for item in report.paradigm_assessments} == set(Paradigm)
     assert report.assessment_for(Paradigm.DISCRETE_EVENT).backend_status is BackendStatus.IMPLEMENTED
     assert report.assessment_for(Paradigm.AGENT_BASED).backend_status is BackendStatus.IMPLEMENTED
-    assert report.assessment_for(Paradigm.MATHEMATICAL).backend_status is BackendStatus.ASSESSMENT_ONLY
+    assert report.assessment_for(Paradigm.MATHEMATICAL).backend_status is BackendStatus.IMPLEMENTED
     assert report.assessment_for(Paradigm.DATA_DRIVEN).backend_status is BackendStatus.ASSESSMENT_ONLY
 
 
@@ -138,11 +138,11 @@ def test_multiple_strong_paradigms_are_not_forced_into_one_winner():
     assert Paradigm.AGENT_BASED in report.recommended_paradigms
 
 
-def test_selected_paradigm_is_recorded_without_claiming_unsupported_backend():
+def test_selected_mathematical_paradigm_can_pass_ready_for_implementation_planning():
     report = assess_readiness(mathematical_project(), selected_paradigm=Paradigm.MATHEMATICAL)
     assert report.selected_paradigm is Paradigm.MATHEMATICAL
-    assert report.status is not ReadinessStatus.READY_FOR_IMPLEMENTATION_PLANNING
-    assert report.assessment_for(Paradigm.MATHEMATICAL).backend_status is BackendStatus.ASSESSMENT_ONLY
+    assert report.status is ReadinessStatus.READY_FOR_IMPLEMENTATION_PLANNING
+    assert report.assessment_for(Paradigm.MATHEMATICAL).backend_status is BackendStatus.IMPLEMENTED
 
 
 def test_ready_for_implementation_planning_requires_strong_fit_and_implemented_backend():

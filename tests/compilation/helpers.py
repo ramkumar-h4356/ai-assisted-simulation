@@ -66,3 +66,36 @@ def abm_profile(project=None):
             ElementBinding("termination.value", BindingSource.USER_PARAMETER, (), "Experiment horizon of 10 steps."),
         ),
     )
+
+
+def mathematical_profile(project=None):
+    from tests.readiness.helpers import mathematical_project
+
+    project = project or mathematical_project()
+    return CompilationProfile(
+        profile_id="supply-demand-mathematical-profile",
+        project_id=project.id,
+        revision_id=project.current_revision_id,
+        paradigm=CompilationParadigm.MATHEMATICAL,
+        model_data={
+            "schema_version": 1,
+            "name": "Supply and demand dynamics",
+            "time": {"start": 0.0, "end": 5.0, "step": 0.1, "unit": "days"},
+            "solver": "rk4",
+            "variables": [
+                {"name": "supply", "initial_value": 100.0, "derivative": "-adjustment_rate * (supply - demand)", "unit": "units"},
+                {"name": "demand", "initial_value": 50.0, "derivative": "demand_growth_rate * demand", "unit": "units"},
+            ],
+            "parameters": [
+                {"name": "adjustment_rate", "value": 0.05, "unit": "1/day"},
+                {"name": "demand_growth_rate", "value": 0.01, "unit": "1/day"},
+            ],
+        },
+        bindings=(
+            ElementBinding("variables[0]", BindingSource.CONCEPTUAL_ELEMENT, ("supply",), "Initial and evolving supply quantity."),
+            ElementBinding("variables[1]", BindingSource.CONCEPTUAL_ELEMENT, ("demand",), "Initial and evolving demand quantity."),
+            ElementBinding("variables[0].derivative", BindingSource.CONCEPTUAL_ELEMENT, ("balance",), "User-selected mathematical expression operationalizes the supply-demand balance relationship."),
+            ElementBinding("parameters[0].value", BindingSource.USER_PARAMETER, (), "Illustrative adjustment rate; not empirical evidence."),
+            ElementBinding("parameters[1].value", BindingSource.USER_PARAMETER, (), "Illustrative demand growth rate; not empirical evidence."),
+        ),
+    )

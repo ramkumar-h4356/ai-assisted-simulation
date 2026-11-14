@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "name": "SIR infectious-disease dynamics",
+  "description": "Illustrative deterministic SIR system. Parameter values are placeholders for demonstrating the solver, not fitted estimates or public-health advice.",
+  "time": {
+    "start": 0.0,
+    "end": 60.0,
+    "step": 0.25,
+    "unit": "days"
+  },
+  "solver": "rk4",
+  "variables": [
+    {
+      "name": "susceptible",
+      "initial_value": 990.0,
+      "derivative": "-transmission_rate * susceptible * infected",
+      "unit": "people"
+    },
+    {
+      "name": "infected",
+      "initial_value": 10.0,
+      "derivative": "transmission_rate * susceptible * infected - recovery_rate * infected",
+      "unit": "people"
+    },
+    {
+      "name": "recovered",
+      "initial_value": 0.0,
+      "derivative": "recovery_rate * infected",
+      "unit": "people"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "transmission_rate",
+      "value": 0.0003,
+      "unit": "1/(person day)"
+    },
+    {
+      "name": "recovery_rate",
+      "value": 0.1,
+      "unit": "1/day"
+    }
+  ]
+}

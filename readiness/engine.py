@@ -23,7 +23,7 @@ from readiness.models import (
 _BACKENDS = {
     Paradigm.DISCRETE_EVENT: BackendStatus.IMPLEMENTED,
     Paradigm.AGENT_BASED: BackendStatus.IMPLEMENTED,
-    Paradigm.MATHEMATICAL: BackendStatus.ASSESSMENT_ONLY,
+    Paradigm.MATHEMATICAL: BackendStatus.IMPLEMENTED,
     Paradigm.DATA_DRIVEN: BackendStatus.ASSESSMENT_ONLY,
 }
 
@@ -392,10 +392,18 @@ def assess_readiness(project: IdeaProject, *, selected_paradigm: Paradigm | str 
     if selected_paradigm is not None:
         chosen = next(item for item in assessments if item.paradigm is selected_paradigm)
         no_blockers = not any(item.blocking for item in clarification_items)
-        mechanisms_operational = bool(revision.mechanisms) and all(
-            item.operational_definition.strip() and item.trigger_description.strip() and item.effect_description.strip()
-            for item in revision.mechanisms
-        )
+        if selected_paradigm is Paradigm.MATHEMATICAL and not revision.mechanisms:
+            # A mathematical model may be governed directly by an explicit
+            # quantitative relationship; a prose mechanism is not mandatory.
+            mechanisms_operational = any(
+                _QUANT_WORDS.search(item.label + " " + item.description)
+                for item in revision.relationships
+            )
+        else:
+            mechanisms_operational = bool(revision.mechanisms) and all(
+                item.operational_definition.strip() and item.trigger_description.strip() and item.effect_description.strip()
+                for item in revision.mechanisms
+            )
         implementation_specifics = not chosen.missing_requirements
         if (
             validation.is_valid and chosen.fit is FitLevel.STRONG

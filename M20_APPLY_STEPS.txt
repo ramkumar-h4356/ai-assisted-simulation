@@ -1,0 +1,22 @@
+M20 APPLY STEPS — MATHEMATICAL SIMULATION ENGINE
+
+1. Keep a backup or ensure your M19 commit is present in Git.
+2. Download M20_Updates.zip and save it somewhere with a known path.
+3. Open PowerShell in the existing repository:
+   cd "D:\Project Simulator\simulator_real_reorganized"
+4. Extract the update archive into the repository root. Replace the example path below with the actual location where you saved the ZIP:
+   Expand-Archive -LiteralPath "D:\PATH\TO\M20_Updates.zip" -DestinationPath . -Force
+5. Run the focused checks:
+   python -m pytest -q tests/mathematical
+   python -m pytest -q tests/compilation/test_mathematical_compilation.py tests/compilation/test_compiler.py
+   python -m pytest -q tests/execution/test_mathematical_execution.py
+   python -m pytest -q tests/workbench/test_workspace.py
+6. Run the illustrative scenario:
+   python -m simulations.mathematical.demo
+7. Run the full regression suite:
+   python -m pytest -q
+8. Send the test output for review. Do not commit or push until M20 verification is confirmed.
+
+Do not copy the archive itself into the repository. Extract its contents so paths such as simulations/mathematical/backend.py land under the repository root. Preserve the folder structure. The update ZIP contains only files changed or added for M20; the complete ZIP is a full project snapshot, not an overlay archive.
+
+The full suite requires the dependencies in requirements-dev.txt, including the existing DES dependencies (SimPy) and Groq SDK. Do not reinstall dependencies if they are already installed in your active virtual environment.

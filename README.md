@@ -15,18 +15,18 @@ An extensible Python platform for helping people formalize, inspect and explore 
 - M17 advanced spatial mechanics: static rectangular/circular obstacles, circular agent bodies, agent/agent collision checks, deterministic block/slide movement resolution, cumulative per-step movement budgets, bounded direct/A* navigation, and persisted movement-event traces.
 - M18 spatial environments: uniform world grids, polygon regions and navigation zones, environmental objects with collision footprints, weighted/impassable terrain routing, and a spatial hash index for efficient live neighbourhood queries.
 - M19 DES replay: stable event timelines, per-entity multi-stage journeys, queue-length and wait intervals, resource occupancy/utilization, event/entity/resource inspection helpers, and provenance-checked replay from saved M9 runs.
+- M20 mathematical simulation: validated ODE model contracts, safe expression parsing (no dynamic Python evaluation), deterministic Euler/Heun/RK4 solvers, coupled-state integration, time-series traces, variable summaries, and M7/M8/M9/workspace integration.
 - AI-assisted idea interpretation, bounded clarification, uncertainty retention and element-level provenance (M6).
-- Deterministic M8 compilation profiles that bind target-model fields to exact conceptual elements or explicitly documented experiment parameters, then validate against the real DES/ABM model schemas.
-- M9 controlled execution of integrity-verified M8 artifacts, reproducible seeded ABM runs, deterministic DES runs, native trace capture, failure records and integrity-checked experiment-result persistence.
+- Deterministic M8 compilation profiles that bind target-model fields to exact conceptual elements or explicitly documented experiment parameters, then validate against the DES/ABM/mathematical model schemas.
+- M9 controlled execution of integrity-verified M8 artifacts, reproducible seeded ABM runs, deterministic DES and mathematical runs, native trace capture, failure records and integrity-checked experiment-result persistence.
 - M10 bounded Cartesian parameter sweeps over explicit M8 `user_parameter` bindings, replication orchestration through M9, descriptive per-variant statistics, baseline deltas, marginal factor-level analysis, integrity-checked reports and CSV export.
 - M11 reproducible Monte Carlo sampling of numeric M8 `user_parameter` fields, outcome distributions, Spearman sensitivity screening, user-defined robustness criteria, provenance checks and integrity-checked JSON/CSV reports.
-- M12 engine-independent visualization bundles and standalone offline HTML dashboards for M9 run metrics and DES/ABM traces, with optional provenance-matched M10 and M11 analysis panels.
+- M12 engine-independent visualization bundles and standalone offline HTML dashboards for M9 run metrics and DES/ABM traces, with optional provenance-matched M10 and M11 analysis panels. Mathematical time-series dashboard rendering is not part of M20.
 - M13 persistent project workspaces with integrated M5 knowledge retrieval/mapping review and M6 interpretation/clarification, strict milestone-artifact intake, project/revision lineage checks, SHA-256 integrity verification, project-scoped M7–M12 orchestration, ZIP import/export, and a controlled extension contract for simulation paradigms.
 - M14 local browser workbench and versioned FastAPI API for workspace management, artifact intake/download, M7 readiness, M8 compilation, M9 execution, M10 sweeps/analysis, M11 uncertainty, M12 dashboard preview, verification and export.
 
 ## Planned capabilities
 
-- `simulations/mathematical`: Equation-to-Simulation using validated mathematical representations and numerical solvers.
 - `simulations/data_driven`: Dataset profiling and guided/automatic data-to-model construction.
 - Inferential statistics, confidence intervals, variance-based global sensitivity indices, optimization, common-random-number designs and evidence-grounded result interpretation (future milestones).
 
@@ -39,7 +39,7 @@ conceptual/      Idea representation, provenance, revisions, JSON persistence an
 knowledge/       Knowledge documents, local corpus, retrieval, mapping candidates and review workflow
 idea_assistant/  M6 structured idea interpretation, clarification, provenance and session audit
 readiness/       M7 deterministic readiness and four-paradigm suitability assessment
-compilation/     M8 traceable conceptual-to-DES/ABM specification compilation
+compilation/     M8 traceable conceptual-to-DES/ABM/mathematical specification compilation
 execution/       M9 controlled backend execution, experiment records and trace persistence
 experimentation/ M10 bounded parameter grids, comparative statistics and analysis persistence
 uncertainty/     M11 Monte Carlo input sampling, sensitivity screening and robustness analysis
@@ -51,7 +51,7 @@ simulations/
   core/          Shared specification and backend contracts
   des/           Discrete-event models, AI workflow, validation, execution and M19 trace replay
   abm/           ABM model contract, AI construction, validation, execution and backend
-  mathematical/ Equation-to-Simulation (planned)
+  mathematical/ Validated ODE models, safe expression evaluator, fixed-step solvers and time-series results (M20)
   data_driven/   Dataset-to-Simulation (planned)
 tests/
   conceptual/    Conceptual model, validation, revision and serialization tests
@@ -62,7 +62,8 @@ tests/
   abm/           ABM schema, pipeline, model, validation, engine and backend tests
   readiness/     M7 paradigm-fit, readiness, clarification and report-persistence tests
   compilation/   M8 profile provenance, native-model validation, compilation gates and artifact integrity tests
-  execution/     M9 seeded execution, trace capture, bounded failures and result integrity tests
+  execution/     M9 seeded execution, mathematical time-series trace capture, bounded failures and result integrity tests
+  mathematical/  M20 ODE model validation, safe expression parsing, Euler/Heun/RK4 solver and coupled-system tests
   simulation_studio/ M15/M16 ABM replay and M19 DES replay, event inspection and provenance checks
   experimentation/ M10 grid generation, provenance-safe analysis, statistics and report-integrity tests
   uncertainty/    M11 distribution sampling, M9 execution checks, sensitivity, robustness and report-integrity tests
@@ -112,23 +113,23 @@ Choose option 6 to describe a new idea, receive a structured conceptual draft, a
 
 Choose option 7 to assess a saved M6 conceptual project or another conceptual JSON project. M7 runs deterministic evaluators for DES, ABM, mathematical and data-driven approaches. Each result includes qualitative fit, traceable findings, limitations, missing requirements and execution-backend availability. The engine can return multiple equally best-supported paradigms; it does not force a single winner.
 
-DES and ABM are reported as implemented backends. Mathematical and data-driven are assessment-only: M7 can inspect conceptual suitability, but their execution engines have not yet been delivered. A dataset reference is not treated as proof that a data file can be accessed or is usable.
+DES, ABM and mathematical simulation are reported as implemented backends. Data-driven remains assessment-only until its data-to-model engine is delivered. A dataset reference is not treated as proof that a data file can be accessed or is usable.
 
 The report is persisted separately from the conceptual project and records the exact revision assessed. It never mutates an idea, calls an LLM, generates executable code or proves scientific validity. See `readiness/README.md`, `M7_ARCHITECTURE.md`, `MILESTONE7_REPORT.md` and `M7_TEST_REPORT.md`.
 
 
 ## Conceptual-to-executable specification compilation (M8)
 
-Choose option 8 to compile a saved conceptual project into a target specification for DES V1 or ABM V1. M8 requires M7 to report `READY_FOR_IMPLEMENTATION_PLANNING` for the selected paradigm. It then requires a user-approved compilation profile containing the exact native target model data and provenance bindings. A binding either points to one or more element IDs in the selected conceptual revision or documents an experiment parameter supplied by the user.
+Choose option 8 to compile a saved conceptual project into a target specification for DES V1, ABM V1 or Mathematical V1. M8 requires M7 to report `READY_FOR_IMPLEMENTATION_PLANNING` for the selected paradigm. It then requires a user-approved compilation profile containing the exact native target model data and provenance bindings. A binding either points to one or more element IDs in the selected conceptual revision or documents an experiment parameter supplied by the user.
 
-This boundary is intentional: an idea such as “people cooperate when trust is high” does not uniquely define a population size, initial trust distribution, threshold, activation schedule or stopping condition. M8 does not invent those details. It validates the explicit target model with the existing DES/ABM parsers and semantic validators, and writes a revision-bound artifact with a SHA-256 model fingerprint. Unmapped conceptual elements are surfaced as warnings; at least one conceptual element and one mechanism must be represented.
+This boundary is intentional: an idea such as “people cooperate when trust is high” does not uniquely define a population size, initial trust distribution, threshold, activation schedule or stopping condition. M8 does not invent those details. It validates the explicit target model with the corresponding DES/ABM/mathematical validators, and writes a revision-bound artifact with a SHA-256 model fingerprint. Unmapped conceptual elements are surfaced as warnings; at least one conceptual element must be represented, plus an operational mechanism for DES/ABM or a quantitative relationship/operational mechanism for mathematical models.
 
-If no profile path is supplied, option 8 creates an intentionally incomplete JSON template for editing. The profile schema and API are documented in `compilation/README.md`; run `python -m compilation.demo` for an offline ABM compilation example. M8 does not execute a simulation, and mathematical/data-driven remain assessment-only until their backends exist. See `M8_ARCHITECTURE.md`, `MILESTONE8_REPORT.md` and `M8_TEST_REPORT.md`.
+If no profile path is supplied, option 8 creates an intentionally incomplete JSON template for editing. The profile schema and API are documented in `compilation/README.md`; run `python -m compilation.demo` for an offline ABM compilation example. M8 does not execute a simulation. Mathematical ODE profiles require explicit equations and a provenance binding to a quantitative relationship or operational mechanism; data-driven remains assessment-only. See `M8_ARCHITECTURE.md`, `MILESTONE8_REPORT.md` and `M8_TEST_REPORT.md`.
 
 
 ## Controlled execution and result capture (M9)
 
-Choose option 9 to load an integrity-checked M8 specification artifact and execute it through its implemented backend. The workflow accepts named parameter sets (optional JSON input) and replications per set, with at most 100 total executions. A parameter can vary only when its exact target path is already documented as an M8 `user_parameter`; conceptual bindings cannot be overwritten. ABM runs receive consecutive random seeds, while DES V1 is deterministic and does not consume random seeds. M9 captures full DES event logs or ABM state/rule histories alongside metrics. Option 10 inspects a saved experiment result.
+Choose option 9 to load an integrity-checked M8 specification artifact and execute it through its implemented backend. The workflow accepts named parameter sets (optional JSON input) and replications per set, with at most 100 total executions. A parameter can vary only when its exact target path is already documented as an M8 `user_parameter`; conceptual bindings cannot be overwritten. ABM runs receive consecutive random seeds, while DES V1 is deterministic and does not consume random seeds. M9 captures full DES event logs, ABM state/rule histories or mathematical time-series snapshots alongside metrics. Option 10 inspects a saved experiment result.
 
 Every M9 result records the M8 artifact ID and fingerprint, project ID, exact conceptual revision, paradigm, backend, run seeds and timestamps. Failed runs are saved with bounded error details; successful runs retain machine-readable traces. Result JSON is fingerprinted and verified when loaded. A 500,000-record estimated trace budget bounds output size. See `execution/README.md`, `M9_ARCHITECTURE.md`, `MILESTONE9_REPORT.md` and `M9_TEST_REPORT.md`.
 
@@ -173,20 +174,20 @@ Choose option 17 from `python main.py`, or run `python -m workbench`, to create 
 
 M6 interpretation and clarification can now run directly against the workspace's immutable original idea. M5 mapping can retrieve candidates from the bundled knowledge corpus or a custom imported M5 corpus, record a candidate as unreviewed, and append a separate user accept/reject decision. Mapping relevance is not treated as confidence or proof. Existing M4/M5/M6 artifacts can also be imported.
 
-Once a conceptual project is linked, run M7 assessment, import an explicit user-approved M8 compilation profile, compile it, execute DES/ABM, run M10 sweeps/analysis, run M11 uncertainty and build M12 visualizations directly within the project workspace. Generated outputs are stored automatically. The workbench enforces project/revision lineage and exact result fingerprints; it does not bypass readiness or compilation gates or invent missing executable model details.
+Once a conceptual project is linked, run M7 assessment, import an explicit user-approved M8 compilation profile, compile it, execute DES/ABM/mathematical models, run M10 sweeps/analysis, run M11 uncertainty and build supported M12 visualizations directly within the project workspace. Generated outputs are stored automatically. The workbench enforces project/revision lineage and exact result fingerprints; it does not bypass readiness or compilation gates or invent missing executable model details.
 
 Each copied artifact has a SHA-256 digest and byte-size record. The workbench verifies integrity before export and supports a portable workspace ZIP. ZIP import rejects unsafe paths and duplicate entries. Local workspace data is stored under the ignored `workspaces/` directory; export a workspace explicitly when you need to back it up or move it. See `workbench/README.md`, `M13_ARCHITECTURE.md`, `MILESTONE13_REPORT.md` and `M13_TEST_REPORT.md`.
 
-The extension registry currently registers the implemented DES V1 and ABM V1 lifecycle adapters through a controlled application-code registry; it does not dynamically load arbitrary third-party code. Mathematical and data-driven engines are still planned; M13 does not represent their assessment-only support as executable capability. M13 itself delivered the local CLI/service layer; M14 adds a first local browser UI/API, but the full interactive spatial 2D environment remains future work.
+The extension registry currently registers the implemented DES V1, ABM V1 and Mathematical V1 lifecycle adapters through a controlled application-code registry; it does not dynamically load arbitrary third-party code. Data-driven remains assessment-only. M13 itself delivered the local CLI/service layer; M14 adds a first local browser UI/API, but the full interactive spatial 2D environment remains future work.
 
 
 ## M14 local browser workbench
 
 Run `python -m webapp` after installing `requirements-dev.txt`, then open `http://127.0.0.1:8765`. The server binds to loopback by default and refuses non-local bind addresses from its CLI. Workspaces remain under the local `workspaces/` directory.
 
-The browser UI supports workspace creation/opening, validated milestone-artifact upload, M7 readiness, M8 profile compilation, M9 execution, M10 parameter sweeps and descriptive analysis, M11 uncertainty runs, M12 dashboard generation/preview, integrity checks and workspace ZIP export. The API is versioned under `/api/v1`; its OpenAPI schema is available at `/api/openapi.json`.
+The browser UI supports workspace creation/opening, validated milestone-artifact upload, M7 readiness, M8 profile compilation, M9 execution, M10 parameter sweeps and descriptive analysis, M11 uncertainty runs, M12 dashboard generation/preview, integrity checks and workspace ZIP export. M20 mathematical runs can be compiled and executed through the shared service/API; a dedicated mathematical time-series dashboard is still future work. The API is versioned under `/api/v1`; its OpenAPI schema is available at `/api/openapi.json`.
 
-M14 does not yet replace the M13 CLI for interactive M6 clarification or M5 mapping review. It does not add mathematical/data-driven execution engines, real-time 2D spatial rendering, authentication or multi-user hosting. Do not expose this local service to a network; remote deployment requires a separate security milestone. See `M14_ARCHITECTURE.md` and `webapp/README.md`.
+M14 does not yet replace the M13 CLI for interactive M6 clarification or M5 mapping review. It does not add data-driven execution, real-time 2D spatial rendering, authentication or multi-user hosting. Do not expose this local service to a network; remote deployment requires a separate security milestone. See `M14_ARCHITECTURE.md` and `webapp/README.md`.
 
 
 ## M15 interactive ABM replay
@@ -206,3 +207,10 @@ M17 adds static rectangular and circular obstacles, optional circular agent bodi
 ## M18 spatial environment and navigation
 
 M18 adds optional `space.grid`, polygon `regions`, polygon `zones`, and positioned environmental `objects`. Regions provide semantic areas and scalar attributes. Zones can be impassable or assign a navigation cost of at least `1.0`; overlapping zone costs multiply. Blocking environmental objects use circular footprints and participate in the same movement checks as obstacles. A* now considers both impassable zones and weighted terrain while retaining the 100,000-cell safety limit. `SpatialIndex` provides deterministic radius and rectangle queries with dynamic insert/move/remove operations; the ABM engine uses it for live spatial-neighbour conditions and updates it after committed movement. The configured `space.grid.cell_size` controls spatial-index buckets and grid coordinate helpers; each `move_towards.grid_cell_size` continues to control A* resolution independently. Polygon area boundaries count as inside, and touching an impassable zone is blocked. Environmental geometry is static for one run; dynamic object/zone updates and environmental interaction rules remain future work. See `M18_ARCHITECTURE.md`, `MILESTONE18_REPORT.md`, `M18_TEST_REPORT.md` and `simulations/abm/README.md`.
+
+
+## M20 mathematical simulation engine
+
+M20 adds deterministic fixed-step ordinary differential equation (ODE) execution. Mathematical models declare a finite simulation time range, step size, solver (`euler`, `heun` or `rk4`), state variables with initial values and derivative expressions, and named numeric parameters. Expressions are parsed using Python's AST but evaluated by a strict allow-listed interpreter; arbitrary Python execution, attribute access, indexing, imports and unknown identifiers are rejected. Coupled derivatives are evaluated from the same intermediate state during each solver stage.
+
+M20 connects the mathematical model contract to M7 readiness, M8 provenance-bound compilation, M9 execution records, parameter overrides and the M13 workspace extension registry. Saved M9 results include every integration time point, values per variable, solver metadata and initial/final/minimum/maximum summaries. Fixed-step ODEs are supported; adaptive/stiff solvers, algebraic equation systems, PDEs, symbolic equation discovery, scientific parameter estimation and dedicated M12 mathematical dashboard rendering remain out of scope. Example: `python -m simulations.mathematical.demo`. See `simulations/mathematical/README.md`, `M20_ARCHITECTURE.md`, `MILESTONE20_REPORT.md` and `M20_TEST_REPORT.md`.

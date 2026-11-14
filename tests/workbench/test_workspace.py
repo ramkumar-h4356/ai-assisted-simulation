@@ -110,11 +110,12 @@ def test_manifest_rejects_unknown_fields_and_duplicate_artifact_ids():
         loads_manifest(json.dumps({**base, "unexpected": True}))
 
 
-def test_builtin_extension_registry_contains_working_des_and_abm_adapters():
+def test_builtin_extension_registry_contains_working_des_abm_and_mathematical_adapters():
     registry = create_builtin_registry()
-    assert {item.paradigm for item in registry.descriptors} == {"discrete_event", "agent_based"}
+    assert {item.paradigm for item in registry.descriptors} == {"discrete_event", "agent_based", "mathematical"}
     assert registry.get("builtin.des.v1").descriptor.model_schema_versions == ("m8-des-v1",)
     assert registry.for_paradigm("agent_based").descriptor.extension_id == "builtin.abm.v1"
+    assert registry.for_paradigm("mathematical").descriptor.extension_id == "builtin.mathematical.v1"
 
 
 def test_extension_registry_rejects_duplicate_paradigms():
@@ -318,4 +319,39 @@ def test_m5_mapping_runs_inside_workspace_and_preserves_review_history(tmp_path)
     assert len(reviewed.revisions) == len(project.revisions) + 2
     assert reviewed_record.metadata["mapping_count"] == 1
     assert workspace.artifact_path(knowledge_record.artifact_id).is_file()
+    assert all(item.valid for item in service.verify())
+
+
+def test_end_to_end_mathematical_workflow_runs_inside_one_workspace(tmp_path):
+    from compilation import save_profile
+    from conceptual import save_idea_project
+    from tests.compilation.helpers import mathematical_profile
+    from tests.readiness.helpers import mathematical_project
+    from workbench import WorkbenchService
+
+    project = mathematical_project()
+    workspace = WorkspaceManager(tmp_path / "workspaces").create(
+        "Supply and demand", project.original_statement
+    )
+    idea_path = tmp_path / "math_idea.json"
+    save_idea_project(project, idea_path)
+    workspace.add_artifact(idea_path, ArtifactType.IDEA_PROJECT)
+
+    service = WorkbenchService(workspace)
+    readiness, readiness_record = service.assess("mathematical")
+    assert readiness.can_begin_implementation_planning
+    assert readiness_record is not None
+
+    profile_path = tmp_path / "math_profile.json"
+    save_profile(mathematical_profile(project), profile_path)
+    profile_record = workspace.add_artifact(profile_path, ArtifactType.COMPILATION_PROFILE)
+    compilation, compilation_record = service.compile(profile_record.artifact_id)
+    assert compilation.is_ready
+    assert compilation_record is not None
+
+    result, result_record = service.execute(compilation_record.artifact_id)
+    assert result.status.value == "completed"
+    assert result.paradigm == "mathematical"
+    assert result_record is not None
+    assert result.runs[0].trace["time_series"][-1]["time"] == 5.0
     assert all(item.valid for item in service.verify())

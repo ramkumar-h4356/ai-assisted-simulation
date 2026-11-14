@@ -564,7 +564,7 @@ def run_compilation_workflow():
     print("Select the paradigm you have chosen after reviewing M7:")
     print("  1. Discrete-event (DES V1 / SimPy)")
     print("  2. Agent-based (ABM V1)")
-    print("  3. Mathematical (assessment only; no M8 backend)")
+    print("  3. Mathematical (Mathematical V1 / ODE: Euler, Heun, RK4)")
     print("  4. Data-driven (assessment only; no M8 backend)")
     selected = input("Paradigm (1-4): ").strip()
     mapping = {
@@ -582,8 +582,8 @@ def run_compilation_workflow():
     print(f"\nM7 status: {readiness_report.status.value}")
     print(f"Paradigm fit: {selected_assessment.fit.value}")
     print(f"Backend: {selected_assessment.backend_status.value}")
-    if selected in {"3", "4"}:
-        print("This paradigm can be assessed in M7, but its executable backend has not been implemented. M8 will not create a pretend model.")
+    if selected == "4":
+        print("Data-driven simulation can be assessed in M7, but its executable backend has not been implemented. M8 will not create a pretend model.")
         return
     if readiness_report.status.value != "ready_for_implementation_planning":
         print("M8 requires M7 status ready_for_implementation_planning. Resolve the listed M7 questions first.")
