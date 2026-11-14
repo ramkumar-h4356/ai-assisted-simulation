@@ -1085,8 +1085,11 @@ def main():
     print("12. Inspect a saved M10 comparative analysis")
     print("13. Run M11 sensitivity, uncertainty and robustness analysis")
     print("14. Inspect a saved M11 uncertainty report")
+    print("15. Build an interactive visualization dashboard from M9/M10/M11 results")
+    print("16. Open a saved M12 dashboard in your browser")
+    print("17. Open the M13 project workbench")
 
-    choice = input("\nChoose an option (1-14): ").strip()
+    choice = input("\nChoose an option (1-17): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -1116,8 +1119,15 @@ def main():
         run_uncertainty_analysis_workflow()
     elif choice == "14":
         inspect_uncertainty_report()
+    elif choice == "15":
+        build_visualization_workflow()
+    elif choice == "16":
+        open_visualization_workflow()
+    elif choice == "17":
+        from workbench.cli import run_workbench
+        run_workbench()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 14.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 17.")
 
 
 
@@ -1342,6 +1352,164 @@ def inspect_uncertainty_report():
     for warning in report.warnings:
         print(f"\nAnalysis note: {warning}")
     print(f"\nReport integrity verified: {report_path}")
+
+
+
+def build_visualization_workflow():
+    """Build a standalone, offline M12 dashboard from verified M9/M10/M11 records."""
+    from pathlib import Path
+    from execution import load_result
+    from experimentation import load_report as load_m10_report
+    from uncertainty import load_report as load_m11_report
+    from visualization import build_visualization_bundle, save_bundle, save_html
+
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs"
+    result_candidates = []
+    if output_dir.exists():
+        for candidate in sorted(output_dir.glob("*_m9*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+            try:
+                result_candidates.append((candidate, load_result(candidate)))
+            except Exception:
+                continue
+
+    print("\n--- M12: Interactive Simulation Visualization ---")
+    if result_candidates:
+        print("Recent integrity-verified M9 execution results:")
+        for index, (candidate, result) in enumerate(result_candidates[:10], start=1):
+            print(f"  {index}. {candidate} | {result.project_title} | {result.paradigm} | {len(result.runs)} runs")
+    selection = input("\nM9 result number or M9 execution JSON path: ").strip().strip('"')
+    if not selection:
+        print("No M9 result selected.")
+        return
+    if selection.isdigit() and result_candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(result_candidates)):
+            print("Invalid result number.")
+            return
+        result_path, result = result_candidates[index - 1]
+    else:
+        result_path = Path(selection).expanduser()
+        if not result_path.is_absolute():
+            result_path = (Path.cwd() / result_path).resolve()
+        try:
+            result = load_result(result_path)
+        except Exception as error:
+            print(f"Could not load or verify the M9 result: {error}")
+            return
+
+    print(f"\nProject: {result.project_title}")
+    print(f"Revision: {result.revision_id} (v{result.revision_version})")
+    print(f"Paradigm: {result.paradigm} | Backend: {result.backend_name}")
+    print(f"Experiment: {result.experiment_id} | Runs: {len(result.runs)}")
+    print("Optional analysis reports must refer to this exact M9 result and M8 artifact.")
+
+    m10_report = None
+    m10_path_text = input("Optional matching M10 analysis JSON path (blank to skip): ").strip().strip('"')
+    if m10_path_text:
+        m10_path = Path(m10_path_text).expanduser()
+        if not m10_path.is_absolute():
+            m10_path = (Path.cwd() / m10_path).resolve()
+        try:
+            m10_report = load_m10_report(m10_path)
+        except Exception as error:
+            print(f"Could not load or verify the M10 report: {error}")
+            return
+
+    m11_report = None
+    m11_path_text = input("Optional matching M11 uncertainty report JSON path (blank to skip): ").strip().strip('"')
+    if m11_path_text:
+        m11_path = Path(m11_path_text).expanduser()
+        if not m11_path.is_absolute():
+            m11_path = (Path.cwd() / m11_path).resolve()
+        try:
+            m11_report = load_m11_report(m11_path)
+        except Exception as error:
+            print(f"Could not load or verify the M11 report: {error}")
+            return
+
+    point_limit_text = input("Maximum visual trace points [20000]: ").strip()
+    try:
+        point_limit = int(point_limit_text) if point_limit_text else 20_000
+        if point_limit < 10:
+            raise ValueError
+    except ValueError:
+        print("Point limit must be an integer of at least 10.")
+        return
+
+    try:
+        bundle = build_visualization_bundle(
+            result, analysis_report=m10_report,
+            uncertainty_report=m11_report, point_limit=point_limit,
+        )
+    except Exception as error:
+        print(f"Visualization build rejected: {error}")
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    base = output_dir / f"{result.project_id}_m12_visualization"
+    bundle_path = base.with_suffix(".json")
+    html_path = output_dir / f"{result.project_id}_m12_dashboard.html"
+    version = 2
+    while bundle_path.exists() or html_path.exists():
+        bundle_path = output_dir / f"{result.project_id}_m12_visualization_v{version}.json"
+        html_path = output_dir / f"{result.project_id}_m12_dashboard_v{version}.html"
+        version += 1
+    save_bundle(bundle, bundle_path)
+    save_html(bundle, html_path)
+
+    print("\n--- M12 Dashboard Summary ---")
+    print(f"Runs: {len(bundle.data['runs'])}")
+    print(f"Numeric metrics: {len(bundle.data['metric_series'])}")
+    print(f"Trace views: {len(bundle.data['trace_views'])}")
+    print(f"M10 comparison attached: {'yes' if bundle.data['m10'] else 'no'}")
+    print(f"M11 uncertainty attached: {'yes' if bundle.data['m11'] else 'no'}")
+    for warning in bundle.warnings:
+        print(f"\nVisualization note: {warning}")
+    print(f"\nVisualization bundle JSON: {bundle_path}")
+    print(f"Standalone dashboard HTML: {html_path}")
+    print("Open the HTML file in a modern browser. It works offline and requires no server or external libraries.")
+
+
+def open_visualization_workflow():
+    """Open a saved standalone M12 dashboard in the default web browser."""
+    from pathlib import Path
+    import webbrowser
+
+    output_dir = Path(__file__).resolve().parent / "outputs"
+    candidates = sorted(
+        output_dir.glob("*_m12_dashboard*.html"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+    print("\n--- Open M12 Visualization Dashboard ---")
+    if not candidates:
+        print("No saved M12 dashboard was found. Run option 15 first.")
+        return
+    for index, candidate in enumerate(candidates[:10], start=1):
+        print(f"  {index}. {candidate}")
+    selection = input("\nDashboard number or HTML path: ").strip().strip('"')
+    if not selection:
+        print("No dashboard selected.")
+        return
+    if selection.isdigit():
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid dashboard number.")
+            return
+        dashboard = candidates[index - 1]
+    else:
+        dashboard = Path(selection).expanduser()
+        if not dashboard.is_absolute():
+            dashboard = (Path.cwd() / dashboard).resolve()
+    if not dashboard.exists() or dashboard.suffix.lower() != ".html":
+        print("The selected HTML dashboard does not exist.")
+        return
+    opened = webbrowser.open(dashboard.as_uri())
+    if opened:
+        print(f"Opened dashboard: {dashboard}")
+    else:
+        print(f"The browser did not report that it opened. Open this file manually: {dashboard}")
 
 
 if __name__ == "__main__":

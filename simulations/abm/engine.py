@@ -1,10 +1,10 @@
-"""Deterministic and seeded-stochastic execution for ABM V1."""
+"""Deterministic and seeded-stochastic execution for ABM, including M16 spatial rules."""
 
 from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from math import isfinite
+from math import hypot, isfinite
 from types import MappingProxyType
 from typing import Mapping
 
@@ -21,11 +21,19 @@ from simulations.abm.model import (
     Condition,
     IncrementAttribute,
     MaxSteps,
+    MoveBy,
+    MoveTo,
+    MoveTowards,
+    PathfindingAlgorithm,
+    Position,
     RelatedAgentStateCount,
     Scalar,
     SetAttribute,
     SetState,
+    SpatialNeighbourStateCount,
+    SpatialSpace,
 )
+from simulations.abm.spatial import advance_along_path, astar_path, path_is_clear
 from simulations.abm.validation import validate_agent_model
 
 
@@ -52,9 +60,15 @@ class AgentSnapshot:
     agent_type: str
     state: str
     attributes: Mapping[str, Scalar]
+    position: Position | None = None
+    radius: float = 0.0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "attributes", _freeze_scalar_mapping(self.attributes))
+        if self.position is not None and not isinstance(self.position, Position):
+            raise TypeError("snapshot position must be a Position or None")
+        if isinstance(self.radius, bool) or not isinstance(self.radius, (int, float)) or not isfinite(self.radius) or self.radius < 0:
+            raise ValueError("snapshot radius must be a finite non-negative number")
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,12 +109,46 @@ class RuleEvaluation:
 
 
 @dataclass(frozen=True, slots=True)
+class MovementEvent:
+    """Auditable result of one spatial movement action."""
+
+    step: int
+    agent_id: str
+    rule_id: str
+    action_index: int
+    action_type: str
+    requested_target: Position
+    actual_position: Position
+    status: str
+    reason: str | None = None
+    path: tuple[Position, ...] = ()
+    distance_travelled: float = 0.0
+    distance_limit_reached: bool = False
+
+    def __post_init__(self) -> None:
+        if self.step <= 0 or self.action_index < 0:
+            raise ValueError("movement event step/action index is invalid")
+        if not isinstance(self.requested_target, Position) or not isinstance(self.actual_position, Position):
+            raise TypeError("movement event positions must be Position values")
+        if self.status not in {"moved", "blocked", "slid", "no_path", "unchanged"}:
+            raise ValueError("movement event status is unsupported")
+        if self.distance_travelled < 0 or not isfinite(self.distance_travelled):
+            raise ValueError("movement event distance must be finite and non-negative")
+        if not isinstance(self.path, tuple) or any(not isinstance(point, Position) for point in self.path):
+            raise TypeError("movement event path must be a tuple of Position values")
+        if not isinstance(self.distance_limit_reached, bool):
+            raise TypeError("movement event distance_limit_reached must be a boolean")
+
+
+@dataclass(frozen=True, slots=True)
 class AgentTrajectoryPoint:
     """One agent's state and attributes at a recorded simulation step."""
 
     step: int
     state: str
     attributes: Mapping[str, Scalar]
+    position: Position | None = None
+    radius: float = 0.0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "attributes", _freeze_scalar_mapping(self.attributes))
@@ -116,6 +164,7 @@ class ABMSimulationResult:
     history: tuple[SimulationSnapshot, ...]
     rule_evaluations: tuple[RuleEvaluation, ...]
     final_state_counts: Mapping[str, int]
+    movement_events: tuple[MovementEvent, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -126,6 +175,10 @@ class ABMSimulationResult:
         expected_history_length = self.steps_completed + 1
         if len(self.history) != expected_history_length:
             raise ValueError("history must contain the initial state and every completed step")
+        if not isinstance(self.movement_events, tuple) or any(
+            not isinstance(item, MovementEvent) for item in self.movement_events
+        ):
+            raise TypeError("movement_events must be a tuple of MovementEvent values")
 
     @property
     def final_agents(self) -> tuple[AgentSnapshot, ...]:
@@ -142,6 +195,8 @@ class ABMSimulationResult:
                 step=snapshot.step,
                 state=agent.state,
                 attributes=agent.attributes,
+                position=agent.position,
+                radius=agent.radius,
             )
             for snapshot in self.history
             for agent in (snapshot.agent(agent_id),)
@@ -154,10 +209,14 @@ class _RuntimeAgent:
     agent_type: str
     state: str
     attributes: dict[str, Scalar]
+    position: Position | None = None
+    radius: float = 0.0
+    max_step_distance: float | None = None
+    movement_used: float = 0.0
 
 
 class AgentBasedSimulationEngine:
-    """Execute ABM V1 using sequential, declaration-order activation.
+    """Execute ABM using sequential, declaration-order activation.
 
     Agents activate in their original model order. For each agent, behaviour
     rules are evaluated in declaration order. Actions from a successful rule
@@ -166,6 +225,8 @@ class AgentBasedSimulationEngine:
 
     For directed relationships, the source agent sees the target as an
     outgoing neighbour. Undirected relationships are visible from both ends.
+    Spatial neighbourhoods use current Euclidean positions; movement committed
+    by an earlier agent is visible to agents activated later in the same step.
     """
 
     def run(self, model: AgentModel) -> ABMSimulationResult:
@@ -184,6 +245,9 @@ class AgentBasedSimulationEngine:
                 agent_type=agent.agent_type,
                 state=agent.state,
                 attributes=dict(agent.attributes),
+                position=agent.position,
+                radius=agent.radius,
+                max_step_distance=agent.max_step_distance,
             )
             for agent in model.agents
         }
@@ -192,8 +256,11 @@ class AgentBasedSimulationEngine:
 
         history: list[SimulationSnapshot] = [self._snapshot(0, runtime_agents, model.agents)]
         evaluations: list[RuleEvaluation] = []
+        movement_events: list[MovementEvent] = []
 
         for step in range(1, model.termination.value + 1):
+            for runtime_agent in runtime_agents.values():
+                runtime_agent.movement_used = 0.0
             for initial_agent in model.agents:
                 active = runtime_agents[initial_agent.identifier]
                 for rule in model.behaviours:
@@ -208,6 +275,7 @@ class AgentBasedSimulationEngine:
                         neighbours,
                         step,
                         rule,
+                        model.space,
                     )
                     if not matched:
                         evaluations.append(
@@ -226,7 +294,10 @@ class AgentBasedSimulationEngine:
 
                     probability_passed = self._probability_passes(rule, rng)
                     if probability_passed:
-                        self._apply_actions(active, rule, step)
+                        self._apply_actions(
+                            active, rule, step, model.space,
+                            agents=runtime_agents, movement_events=movement_events,
+                        )
 
                     evaluations.append(
                         RuleEvaluation(
@@ -254,6 +325,7 @@ class AgentBasedSimulationEngine:
             history=tuple(history),
             rule_evaluations=tuple(evaluations),
             final_state_counts=dict(sorted(final_counts.items())),
+            movement_events=tuple(movement_events),
         )
 
     @staticmethod
@@ -288,6 +360,8 @@ class AgentBasedSimulationEngine:
                     agent_type=runtime_agents[initial.identifier].agent_type,
                     state=runtime_agents[initial.identifier].state,
                     attributes=runtime_agents[initial.identifier].attributes,
+                    position=runtime_agents[initial.identifier].position,
+                    radius=runtime_agents[initial.identifier].radius,
                 )
                 for initial in declaration_order
             ),
@@ -301,6 +375,7 @@ class AgentBasedSimulationEngine:
         neighbours: Mapping[tuple[str, str], tuple[str, ...]],
         step: int,
         rule: BehaviourRule,
+        space: SpatialSpace | None,
     ) -> bool:
         if isinstance(condition, AgentStateIs):
             return active.state == condition.state
@@ -334,15 +409,38 @@ class AgentBasedSimulationEngine:
                 rule,
             )
 
+        if isinstance(condition, SpatialNeighbourStateCount):
+            if space is None or active.position is None:
+                raise SimulationExecutionError(
+                    self._runtime_context(step, active, rule)
+                    + "spatial neighbourhood condition requires a positioned agent and spatial space"
+                )
+            matching_count = sum(
+                1
+                for other in agents.values()
+                if other.identifier != active.identifier
+                and other.position is not None
+                and other.state == condition.state
+                and space.distance(active.position, other.position) <= condition.radius
+            )
+            return self._compare(
+                matching_count,
+                condition.operator,
+                condition.count,
+                step,
+                active,
+                rule,
+            )
+
         if isinstance(condition, AllOf):
             return all(
-                self._evaluate_condition(child, active, agents, neighbours, step, rule)
+                self._evaluate_condition(child, active, agents, neighbours, step, rule, space)
                 for child in condition.conditions
             )
 
         if isinstance(condition, AnyOf):
             return any(
-                self._evaluate_condition(child, active, agents, neighbours, step, rule)
+                self._evaluate_condition(child, active, agents, neighbours, step, rule, space)
                 for child in condition.conditions
             )
 
@@ -398,14 +496,43 @@ class AgentBasedSimulationEngine:
         active: _RuntimeAgent,
         rule: BehaviourRule,
         step: int,
+        space: SpatialSpace | None = None,
+        *,
+        agents: Mapping[str, _RuntimeAgent] | None = None,
+        movement_events: list[MovementEvent] | None = None,
     ) -> None:
         # Apply to temporary values first so an invalid action cannot leave a
-        # partially updated agent state for this rule.
+        # partially updated agent state, position, or movement budget.
         new_state = active.state
         new_attributes = dict(active.attributes)
+        new_position = active.position
+        new_movement_used = active.movement_used
+        pending_events: list[MovementEvent] = []
+        visible_agents = agents or {active.identifier: active}
         try:
-            for action in rule.actions:
-                self._apply_action(action, new_attributes, step, active, rule)
+            for action_index, action in enumerate(rule.actions):
+                if isinstance(action, (MoveBy, MoveTo, MoveTowards)):
+                    if space is None or new_position is None:
+                        raise SimulationExecutionError(
+                            self._runtime_context(step, active, rule)
+                            + f"{type(action).__name__} requires a positioned agent and spatial space"
+                        )
+                    outcome = self._execute_movement(
+                        active=active,
+                        start=new_position,
+                        action=action,
+                        action_index=action_index,
+                        rule=rule,
+                        step=step,
+                        space=space,
+                        agents=visible_agents,
+                        movement_used=new_movement_used,
+                    )
+                    new_position = outcome.actual_position
+                    new_movement_used += outcome.distance_travelled
+                    pending_events.append(outcome)
+                else:
+                    self._apply_action(action, new_attributes, step, active, rule)
                 if isinstance(action, SetState):
                     new_state = action.state
         except SimulationExecutionError:
@@ -418,6 +545,207 @@ class AgentBasedSimulationEngine:
 
         active.state = new_state
         active.attributes = new_attributes
+        active.position = new_position
+        active.movement_used = new_movement_used
+        if movement_events is not None:
+            movement_events.extend(pending_events)
+
+    def _execute_movement(
+        self,
+        *,
+        active: _RuntimeAgent,
+        start: Position,
+        action: MoveBy | MoveTo | MoveTowards,
+        action_index: int,
+        rule: BehaviourRule,
+        step: int,
+        space: SpatialSpace,
+        agents: Mapping[str, _RuntimeAgent],
+        movement_used: float,
+    ) -> MovementEvent:
+        if isinstance(action, MoveBy):
+            raw_target = Position(start.x + action.dx, start.y + action.dy)
+            target = space.normalize(raw_target)
+            route = (start, raw_target if space.boundary.value == "wrap" else target)
+            movement_cap = None
+            action_type = "move_by"
+        elif isinstance(action, MoveTo):
+            target = space.normalize(Position(action.x, action.y))
+            delta_x = target.x - start.x
+            delta_y = target.y - start.y
+            if space.boundary.value == "wrap":
+                if delta_x > space.width / 2:
+                    delta_x -= space.width
+                elif delta_x < -space.width / 2:
+                    delta_x += space.width
+                if delta_y > space.height / 2:
+                    delta_y -= space.height
+                elif delta_y < -space.height / 2:
+                    delta_y += space.height
+            raw_target = Position(start.x + delta_x, start.y + delta_y)
+            route = (start, raw_target)
+            movement_cap = None
+            action_type = "move_to"
+        else:
+            target = space.normalize(Position(action.x, action.y))
+            if action.pathfinding is PathfindingAlgorithm.ASTAR:
+                try:
+                    route = astar_path(
+                        space, start, target, active.radius, action.grid_cell_size,
+                        tuple(agents.values()), active.identifier,
+                    )
+                except ValueError as error:
+                    raise SimulationExecutionError(
+                        self._runtime_context(step, active, rule) + str(error)
+                    ) from error
+                if route is None:
+                    return MovementEvent(
+                        step, active.identifier, rule.rule_id, action_index, "move_towards",
+                        target, start, "no_path", "path_not_found", (start,), 0.0, False,
+                    )
+            else:
+                raw_target = target
+                if space.boundary.value == "wrap":
+                    dx = target.x - start.x
+                    dy = target.y - start.y
+                    if dx > space.width / 2:
+                        dx -= space.width
+                    elif dx < -space.width / 2:
+                        dx += space.width
+                    if dy > space.height / 2:
+                        dy -= space.height
+                    elif dy < -space.height / 2:
+                        dy += space.height
+                    raw_target = Position(start.x + dx, start.y + dy)
+                route = (start, raw_target)
+            movement_cap = action.max_distance
+            action_type = "move_towards"
+
+        route_length = self._polyline_length(route)
+        remaining_agent_budget = (
+            float("inf") if active.max_step_distance is None
+            else max(0.0, active.max_step_distance - movement_used)
+        )
+        effective_budget = remaining_agent_budget
+        if movement_cap is not None:
+            effective_budget = min(effective_budget, movement_cap)
+        distance_limit_reached = effective_budget + 1e-10 < route_length
+        candidate, travelled_path = advance_along_path(route, effective_budget)
+        candidate_position = candidate
+        if space.boundary.value != "wrap":
+            candidate_position = space.normalize(candidate)
+
+        clear = self._route_is_clear(
+            travelled_path, space, active.radius, agents, active.identifier,
+        )
+        status = "moved"
+        reason = None
+        actual_path = travelled_path
+
+        if not clear:
+            if isinstance(action, MoveTowards) and action.pathfinding is PathfindingAlgorithm.ASTAR:
+                status, reason = "no_path", "route_blocked"
+                candidate_position = start
+                actual_path = (start,)
+            elif space.collision_resolution.value == "slide":
+                slide_position, slide_path, blocker = self._slide_move(
+                    start, candidate, space, active, agents,
+                )
+                candidate_position = slide_position
+                actual_path = slide_path
+                if self._polyline_length(slide_path) > 1e-10:
+                    status = "slid"
+                    reason = blocker
+                else:
+                    status = "blocked"
+                    reason = blocker
+            else:
+                status, reason = "blocked", self._first_blocker(
+                    travelled_path, space, active.radius, agents, active.identifier,
+                )
+                candidate_position = start
+                actual_path = (start,)
+
+        if space.boundary.value == "wrap":
+            candidate_position = space.normalize(candidate_position)
+        distance_travelled = self._polyline_length(actual_path)
+        if distance_travelled <= 1e-10 and status == "moved":
+            status = "unchanged"
+        return MovementEvent(
+            step=step,
+            agent_id=active.identifier,
+            rule_id=rule.rule_id,
+            action_index=action_index,
+            action_type=action_type,
+            requested_target=target,
+            actual_position=candidate_position,
+            status=status,
+            reason=reason or ("distance_limit" if distance_limit_reached else None),
+            path=actual_path,
+            distance_travelled=distance_travelled,
+            distance_limit_reached=distance_limit_reached,
+        )
+
+    @staticmethod
+    def _polyline_length(path: tuple[Position, ...]) -> float:
+        return sum(hypot(right.x - left.x, right.y - left.y) for left, right in zip(path, path[1:]))
+
+    @staticmethod
+    def _route_is_clear(
+        path: tuple[Position, ...],
+        space: SpatialSpace,
+        radius: float,
+        agents: Mapping[str, _RuntimeAgent],
+        active_id: str,
+    ) -> bool:
+        return all(
+            path_is_clear(space, left, right, radius, tuple(agents.values()), active_id)[0]
+            for left, right in zip(path, path[1:])
+        )
+
+    @staticmethod
+    def _first_blocker(
+        path: tuple[Position, ...],
+        space: SpatialSpace,
+        radius: float,
+        agents: Mapping[str, _RuntimeAgent],
+        active_id: str,
+    ) -> str:
+        for left, right in zip(path, path[1:]):
+            clear, blocker = path_is_clear(space, left, right, radius, tuple(agents.values()), active_id)
+            if not clear:
+                return blocker or "collision"
+        return "collision"
+
+    def _slide_move(
+        self,
+        start: Position,
+        target: Position,
+        space: SpatialSpace,
+        active: _RuntimeAgent,
+        agents: Mapping[str, _RuntimeAgent],
+    ) -> tuple[Position, tuple[Position, ...], str | None]:
+        # Deterministic axis order: try X first, then Y. If X is blocked, try Y
+        # from the original point. The policy is stable across platforms.
+        x_candidate = Position(target.x, start.y)
+        first_clear, first_blocker = path_is_clear(
+            space, start, x_candidate, active.radius, tuple(agents.values()), active.identifier,
+        )
+        current = x_candidate if first_clear else start
+        path = [start]
+        blocker = first_blocker
+        if first_clear and self._polyline_length((start, current)) > 1e-10:
+            path.append(current)
+        y_candidate = Position(current.x, target.y)
+        second_clear, second_blocker = path_is_clear(
+            space, current, y_candidate, active.radius, tuple(agents.values()), active.identifier,
+        )
+        if second_clear and self._polyline_length((current, y_candidate)) > 1e-10:
+            path.append(y_candidate)
+            current = y_candidate
+        elif not second_clear:
+            blocker = second_blocker or blocker
+        return current, tuple(path), blocker
 
     def _apply_action(
         self,

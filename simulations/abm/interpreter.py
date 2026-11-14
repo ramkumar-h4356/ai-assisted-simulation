@@ -39,55 +39,74 @@ REQUIRED TOP-LEVEL SCHEMA:
 
 INTERPRETATION RULES
 1. Agents are individual entities in V1. Represent each described individual as one
-   array item. For a small stated count (for example, three people), expand the count
-   into three individual entries. Do not expand very large populations; when the
-   description requires more than 100 individual agents, return an empty agents array
-   and put a clear explanation in the uncertainty list is NOT supported by this
-   schema, so instead set agents to null. The application will ask for a smaller,
-   explicit V1 example.
+   array item. Do not expand populations requiring more than 100 individual agents;
+   return an empty agents array and request a smaller explicit V1 example.
 2. "reference" is a temporary alias used only to connect relationships. Generate a
    unique short alias for every agent. The Python application generates final IDs.
-   Do not ask the user for internal identifiers. Meaningful names may be used as
-   references when the user supplied them.
 3. Every agent needs an agent_type and an initial state. Preserve user terminology.
    Do not invent initial states. Use null for unknown required values.
 4. Attributes must be JSON scalar values (string, number, boolean, or null). Do not
    encode nested objects or arrays as agent attributes.
-5. Relationships are static links between agent references. Use an empty array only
-   when no relationships are described or needed. Do not infer a complete network
-   merely because agents are in the same population.
-6. Behaviour conditions may use only:
+5. Only when the user's scenario explicitly has a 2D spatial world, include a top-level
+   "space" object with positive finite width and height and boundary "clamp" or "wrap".
+   Include a numeric {"x": ..., "y": ...} position for every agent. Do not invent world
+   dimensions, coordinates, physical units, or boundary semantics; preserve unknown
+   spatial details for clarification. For non-spatial scenarios, omit space/position.
+6. Relationships are static links between agent references. Use an empty array only
+   when no relationships are described or needed. Do not infer a complete network.
+7. Behaviour conditions may use only:
    - {"type":"agent_state_is", "state":"..."}
    - {"type":"agent_attribute_comparison", "attribute":"...", "operator":"eq|ne|lt|le|gt|ge", "value":...}
    - {"type":"related_agent_state_count", "relation_type":"...", "state":"...", "operator":"eq|ne|lt|le|gt|ge", "count":0}
+   - {"type":"spatial_neighbour_state_count", "radius":5, "state":"...", "operator":"eq|ne|lt|le|gt|ge", "count":0}
    - {"type":"all_of|any_of", "conditions":[...]}
-7. Behaviour actions may use only:
+8. Behaviour actions may use only:
    - {"type":"set_state", "state":"..."}
    - {"type":"set_attribute", "attribute":"...", "value":...}
    - {"type":"increment_attribute", "attribute":"...", "amount":1}
-8. Rule conditions are tested for the currently activated agent. An agent_type filter
-   may be null to apply to all types. Rules execute in declaration order.
-9. A definite rule has probability 1.0. A chance/percentage must be converted to a
-   probability from 0 to 1. Never invent probabilities. When the probability is
-   genuinely unspecified and cannot be inferred, set it to null.
-10. The engine supports sequential agent activation in declaration order only. Always
-    emit that activation policy. Do not claim to support simultaneous or random order.
-11. Termination in V1 is a positive integer max_steps. If the user did not state a
-    meaningful run length, set termination.value to null; do not invent it.
-12. random_seed is null unless the user specifies a non-negative integer seed.
-13. Preserve uncertainty rather than silently guessing. Use null for unknown required
-    fields. The application handles internal IDs and asks the user about missing facts.
-14. The environment is a shared dictionary of scalar attributes. No environment mutation
-    actions are supported in this version.
-15. Do not create a rule if the user's description does not establish one.
+   - {"type":"move_by", "dx":1, "dy":0}
+   - {"type":"move_to", "x":10, "y":10}
+   - {"type":"move_towards", "x":80, "y":20, "max_distance":2,
+      "pathfinding":"astar|direct", "grid_cell_size":1}
+9. Movement requires a configured spatial world and an initial position for every agent.
+   move_towards advances a bounded distance along a direct or A* route. A* requires
+   clamp boundaries, uses an 8-connected grid with diagonal corner-cutting prevention,
+   and is limited to 100,000 cells. Do not assume that A* supports wrapped worlds.
+10. Spatial obstacles may be declared only when the user's scenario describes them.
+    Use space.obstacles entries with type "rectangle" (x, y, width, height) or "circle"
+    (x, y, radius), each with a unique id. Do not invent obstacle geometry.
+11. Agent "radius" is an optional non-negative circular body radius. "max_step_distance"
+    is an optional cumulative travel budget for all movement actions by that agent in one
+    simulation step. Do not invent either value.
+12. space.agent_collisions enables/disables agent-body collision checks (default true).
+    space.collision_resolution is "block" or "slide" (default block). Do not assert the
+    user selected a non-default policy unless they specified it. Static obstacle geometry
+    blocks movement. Rectangle clearance is conservative near rectangle corners.
+13. Clamp boundaries constrain positions to [0,width] × [0,height]; wrap boundaries
+    normalize positions modulo world dimensions and connect opposite edges for distance.
+14. Rule conditions are tested for the currently activated agent. An agent_type filter
+    may be null to apply to all types. Rules execute in declaration order.
+15. A definite rule has probability 1.0. Convert stated chances to values from 0 to 1.
+    Never invent probabilities; use null for genuinely unknown required values.
+16. The engine supports sequential activation in declaration order only. Do not claim
+    simultaneous or random-order activation.
+17. Termination is a positive integer max_steps. If the user did not state a meaningful
+    run length, set termination.value to null; do not invent it. random_seed is null
+    unless the user specifies a non-negative integer seed.
+18. Preserve uncertainty rather than silently guessing. The application asks about
+    missing required facts. The environment is a shared dictionary of scalar attributes;
+    no environment mutation actions are supported.
 
 CONDITION SEMANTICS: related_agent_state_count counts the currently visible neighbours
 for the specified relation type. The relationship direction follows the model's static
-edges. Do not confuse this with a global population count.
+edges. spatial_neighbour_state_count counts other agents within the configured Euclidean
+radius using their current positions. Under sequential activation, agents activated
+earlier in the step may already have moved.
 
 Do not omit any required top-level key. Use [] only when a collection is known to be empty; use null for an unknown required collection.
-Output must have exactly these top-level keys and be directly parseable with json.loads:
-name, agents, environment, relationships, behaviours, activation, termination, random_seed.
+Output must be directly parseable with json.loads. Required top-level keys are name,
+agents, environment, relationships, behaviours, activation, termination and random_seed.
+The optional top-level space key is included only for explicitly spatial scenarios.
 """
 
 

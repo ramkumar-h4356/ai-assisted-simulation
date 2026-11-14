@@ -51,6 +51,10 @@ def _question_for(issue: ValidationIssue) -> str:
         return "ABM V1 currently requires an explicit list of individual agents (up to 100). Describe a smaller group, with each agent type and initial state."
     if path == "relationships":
         return "Which agents are connected, and what kind of relationship connects them? Say explicitly when there are no relationships."
+    if path == "space" or path.startswith("space."):
+        return "What are the 2D world width and height, what units are used, and should agents clamp at the edges or wrap to the opposite side?"
+    if path.endswith(".position"):
+        return "What are this agent's initial x and y coordinates inside the declared 2D world?"
     if path == "behaviours":
         return "What behaviour rules should agents follow? Describe each rule's condition and resulting action, or confirm that agents do not change."
     if path.endswith(".agent_type"):

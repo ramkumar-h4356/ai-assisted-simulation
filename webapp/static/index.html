@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>Simulation Workbench</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Simulation Workbench home">
+      <span class="brand-mark">SW</span>
+      <span><strong>Simulation Workbench</strong><small>Idea → model → experiment</small></span>
+    </a>
+    <div class="topbar-meta"><span class="local-dot"></span> Local workspace <span class="version">M14 · v1</span></div>
+  </header>
+
+  <main class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-heading"><div><p class="eyebrow">PROJECTS</p><h1>Your workspaces</h1></div><button class="icon-button" id="refresh-workspaces" type="button" title="Refresh workspaces" aria-label="Refresh workspaces">↻</button></div>
+      <form id="create-workspace-form" class="create-form">
+        <label for="project-title">New project</label>
+        <input id="project-title" name="title" maxlength="120" placeholder="Project title" required>
+        <textarea id="project-idea" name="original_idea" rows="3" maxlength="20000" placeholder="Describe the original idea…" required></textarea>
+        <button class="primary-button full-width" type="submit">＋ Create workspace</button>
+      </form>
+      <div class="project-list-heading"><span>Saved workspaces</span><span id="project-count" class="count">0</span></div>
+      <div id="workspace-list" class="workspace-list" aria-live="polite">
+        <p class="muted small">Loading workspaces…</p>
+      </div>
+      <div class="sidebar-foot"><span class="shield">●</span> Data stays in your local workspace folder.</div>
+    </aside>
+
+    <section class="content">
+      <div id="empty-state" class="empty-state">
+        <div class="empty-illustration"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="core-node">∑</div><span class="node node-a">E</span><span class="node node-b">R</span><span class="node node-c">↗</span></div>
+        <p class="eyebrow">MODEL DEVELOPMENT ENVIRONMENT</p>
+        <h2>Turn an idea into an experiment.</h2>
+        <p class="muted">Create a workspace or select an existing project to continue its conceptual model, simulation and analysis lifecycle.</p>
+      </div>
+
+      <div id="workspace-view" hidden>
+        <section class="project-header">
+          <div class="project-title-block"><p class="eyebrow">ACTIVE WORKSPACE</p><h2 id="active-title">Project</h2><p id="active-id" class="muted mono"></p></div>
+          <div class="project-header-actions"><button id="verify-button" class="secondary-button" type="button">✓ Verify integrity</button><button id="export-button" class="primary-button" type="button">Export project ↓</button></div>
+        </section>
+
+        <section class="stats-grid" id="stats-grid"></section>
+
+        <section class="panel workflow-panel">
+          <div class="section-heading"><div><p class="eyebrow">PROJECT LIFECYCLE</p><h3>Workflow progress</h3></div><span id="workflow-summary" class="muted small"></span></div>
+          <div id="workflow-grid" class="workflow-grid"></div>
+        </section>
+
+        <div class="two-column">
+          <section class="panel source-panel">
+            <div class="section-heading"><div><p class="eyebrow">SOURCE</p><h3>Original idea</h3></div><span class="lock-label">⌑ Immutable</span></div>
+            <p id="original-idea" class="source-idea"></p>
+          </section>
+          <section class="panel import-panel">
+            <div class="section-heading"><div><p class="eyebrow">ARTIFACT INTAKE</p><h3>Import milestone artifact</h3></div></div>
+            <form id="upload-form" class="compact-form">
+              <label for="artifact-type">Artifact type</label>
+              <select id="artifact-type" required>
+                <option value="idea_project">M4 · Conceptual idea project</option>
+                <option value="idea_session">M6 · Idea assistant session</option>
+                <option value="knowledge_base">M5 · Knowledge base</option>
+                <option value="readiness_report">M7 · Readiness report</option>
+                <option value="compilation_profile">M8 · Compilation profile</option>
+                <option value="compilation_artifact">M8 · Compiled specification</option>
+                <option value="execution_result">M9 · Execution result</option>
+                <option value="analysis_report">M10 · Analysis report</option>
+                <option value="uncertainty_plan">M11 · Uncertainty plan</option>
+                <option value="uncertainty_report">M11 · Uncertainty report</option>
+                <option value="visualization_bundle">M12 · Visualization bundle</option>
+                <option value="visualization_html">M12 · HTML dashboard</option>
+                <option value="other">Other project document</option>
+              </select>
+              <label for="artifact-file">JSON or project file</label>
+              <input id="artifact-file" type="file" required>
+              <button class="secondary-button full-width" type="submit">Upload and validate</button>
+            </form>
+            <p class="hint">Files are validated by their milestone schema before they enter the workspace. Upload limit: 20 MB.</p>
+          </section>
+        </div>
+
+        <section class="panel actions-panel">
+          <div class="section-heading"><div><p class="eyebrow">RUN THE MODEL</p><h3>Simulation lifecycle</h3></div><span class="muted small">Existing M7–M12 services</span></div>
+          <div class="action-grid">
+            <form id="readiness-form" class="action-card">
+              <div class="action-number">07</div><h4>Readiness assessment</h4><p>Assess whether the current conceptual revision is sufficiently specified for a paradigm.</p>
+              <label for="readiness-paradigm">Paradigm</label><select id="readiness-paradigm"><option value="agent_based">Agent-based (ABM)</option><option value="discrete_event">Discrete-event (DES)</option><option value="mathematical">Mathematical</option><option value="data_driven">Data-driven</option><option value="">Assess all paradigms</option></select>
+              <button class="secondary-button full-width" type="submit">Run M7 assessment</button>
+            </form>
+            <form id="compile-form" class="action-card">
+              <div class="action-number">08</div><h4>Compile specification</h4><p>Compile a reviewed M8 profile against the current conceptual revision and matching M7 gate.</p>
+              <label for="profile-select">Compilation profile</label><select id="profile-select" required></select>
+              <button class="secondary-button full-width" type="submit">Compile M8</button>
+            </form>
+            <form id="execute-form" class="action-card">
+              <div class="action-number">09</div><h4>Run simulation</h4><p>Execute a verified M8 specification with reproducible run and seed settings.</p>
+              <label for="compilation-select">Compiled specification</label><select id="compilation-select" required></select>
+              <div class="inline-fields"><div><label for="execution-runs">Runs</label><input id="execution-runs" type="number" min="1" max="100" value="1"></div><div><label for="execution-seed">Base seed</label><input id="execution-seed" type="number" min="0" placeholder="Optional"></div></div>
+              <button class="primary-button full-width" type="submit">Execute M9</button>
+            </form>
+            <form id="sweep-form" class="action-card">
+              <div class="action-number">10</div><h4>Parameter sweep</h4><p>Compare explicit user-parameter values through repeated M9 executions.</p>
+              <label for="sweep-compilation">Compiled specification</label><select id="sweep-compilation" required></select>
+              <label for="sweep-path">Parameter target path</label><input id="sweep-path" placeholder="agents[0].attributes.trust" required>
+              <label for="sweep-levels">Values (comma-separated)</label><input id="sweep-levels" placeholder="0.2, 0.5, 0.8" required>
+              <div class="inline-fields"><div><label for="sweep-runs">Runs / level</label><input id="sweep-runs" type="number" min="1" max="100" value="1"></div><div><label for="sweep-seed">Base seed</label><input id="sweep-seed" type="number" min="0" placeholder="Optional"></div></div>
+              <button class="secondary-button full-width" type="submit">Run M10 sweep</button>
+            </form>
+            <form id="analysis-form" class="action-card">
+              <div class="action-number">10A</div><h4>Analyze execution</h4><p>Generate descriptive statistics from an existing M9 execution result.</p>
+              <label for="analysis-execution">Execution result</label><select id="analysis-execution" required></select>
+              <button class="secondary-button full-width" type="submit">Create M10 analysis</button>
+            </form>
+            <form id="uncertainty-form" class="action-card">
+              <div class="action-number">11</div><h4>Uncertainty analysis</h4><p>Run reproducible M11 sampling using a saved uncertainty plan. It creates its own M9 result.</p>
+              <label for="uncertainty-compilation">Compiled specification</label><select id="uncertainty-compilation" required></select>
+              <label for="uncertainty-plan">Uncertainty plan</label><select id="uncertainty-plan" required></select>
+              <div><label for="uncertainty-seed">Execution base seed</label><input id="uncertainty-seed" type="number" min="0" placeholder="Optional"></div>
+              <button class="secondary-button full-width" type="submit">Run M11 analysis</button>
+            </form>
+            <form id="visualization-form" class="action-card">
+              <div class="action-number">12</div><h4>Build dashboard</h4><p>Attach only M10/M11 reports generated from the selected execution result.</p>
+              <label for="visualization-execution">Execution result</label><select id="visualization-execution" required></select>
+              <label for="visualization-analysis">M10 analysis (optional)</label><select id="visualization-analysis"></select>
+              <label for="visualization-uncertainty">M11 report (optional)</label><select id="visualization-uncertainty"></select>
+              <button class="primary-button full-width" type="submit">Build M12 dashboard</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel replay-panel" id="replay-panel">
+          <div class="section-heading">
+            <div><p class="eyebrow">M16 · SPATIAL SIMULATION STUDIO</p><h3>ABM 2D spatial replay</h3></div>
+            <span class="muted small">Recorded M9 execution · read-only</span>
+          </div>
+          <div class="replay-load-row">
+            <div class="replay-field">
+              <label for="replay-execution">Execution result</label>
+              <select id="replay-execution"></select>
+            </div>
+            <div class="replay-field replay-run-field">
+              <label for="replay-run-index">Run</label>
+              <input id="replay-run-index" type="number" min="1" max="100" value="1">
+            </div>
+            <button id="load-replay" class="primary-button" type="button">Load 2D replay</button>
+          </div>
+          <p class="hint replay-disclaimer">Spatial models display their actual recorded coordinates and movement. Models without a declared 2D space use a display-only network layout.</p>
+          <div id="replay-workspace" hidden>
+            <div class="replay-toolbar">
+              <div class="replay-buttons">
+                <button id="replay-first" class="secondary-button" type="button" title="Go to initial state">|◀</button>
+                <button id="replay-prev" class="secondary-button" type="button" title="Previous step">◀</button>
+                <button id="replay-play" class="primary-button" type="button">▶ Play</button>
+                <button id="replay-next" class="secondary-button" type="button" title="Next step">▶</button>
+                <button id="replay-last" class="secondary-button" type="button" title="Go to final state">▶|</button>
+              </div>
+              <div class="replay-progress">
+                <label for="replay-step">Simulation step <strong id="replay-step-label">0 / 0</strong></label>
+                <input id="replay-step" type="range" min="0" max="0" value="0">
+              </div>
+              <div class="replay-speed-field">
+                <label for="replay-speed">Speed</label>
+                <select id="replay-speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+              </div>
+            </div>
+            <div class="replay-layout">
+              <div class="replay-canvas-wrap">
+                <canvas id="replay-canvas" width="1100" height="650" role="img" aria-label="Two-dimensional replay of agents and their relationships"></canvas>
+                <div class="replay-canvas-footer"><span id="replay-model-name">Model</span><span id="replay-run-meta"></span></div>
+              </div>
+              <aside class="replay-inspector">
+                <div class="replay-stat-grid">
+                  <div><span>Agents</span><strong id="replay-agent-count">0</strong></div>
+                  <div><span>Relationships</span><strong id="replay-edge-count">0</strong></div>
+                  <div><span>Rule evaluations</span><strong id="replay-rule-count">0</strong></div>
+                </div>
+                <section class="replay-inspector-section">
+                  <div class="replay-subheading">Population by state</div>
+                  <div id="replay-state-legend" class="replay-state-legend"></div>
+                </section>
+                <section class="replay-inspector-section">
+                  <div class="replay-subheading">Selected agent</div>
+                  <div id="replay-agent-inspector" class="replay-agent-inspector"><p class="muted small">Select an agent in the 2D view.</p></div>
+                </section>
+                <section class="replay-inspector-section">
+                  <div class="replay-subheading">Rule activity at this step</div>
+                  <div id="replay-rule-list" class="replay-rule-list"><p class="muted small">No rule activity recorded for this step.</p></div>
+                </section>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <div class="two-column lower-grid">
+          <section class="panel artifacts-panel"><div class="section-heading"><div><p class="eyebrow">PROVENANCE</p><h3>Artifact ledger</h3></div><span id="artifact-count" class="count">0</span></div><div id="artifact-list" class="artifact-list"></div></section>
+          <section class="panel activity-panel"><div class="section-heading"><div><p class="eyebrow">AUDIT TRAIL</p><h3>Recent activity</h3></div></div><div id="activity-list" class="activity-list"></div></section>
+        </div>
+      </div>
+
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+      <section id="result-panel" class="panel result-panel" hidden><div class="section-heading"><div><p class="eyebrow">OPERATION RESULT</p><h3 id="result-title">Completed</h3></div><button class="icon-button" id="close-result" type="button" aria-label="Close result">×</button></div><a id="result-download" class="download-link" hidden>Download generated artifact ↓</a><pre id="result-output"></pre></section>
+    </section>
+  </main>
+  <footer class="footer"><span>AI-Assisted Simulation Workbench</span><span>M16 · Local spatial simulation studio</span></footer>
+</body>
+</html>

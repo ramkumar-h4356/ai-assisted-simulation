@@ -1,0 +1,30 @@
+M16 — APPLY THE SPATIAL ABM UPDATE
+
+Project location:
+D:\Project Simulator\simulator_real_reorganized
+
+1. Commit or back up your current project code.
+2. Extract M16_Updates.zip directly into the project directory above.
+3. Allow updated source files to overwrite existing files.
+4. Do NOT delete, replace or extract over your workspaces directory. The update archive does not contain workspaces.
+5. Open PowerShell at the project directory.
+
+Run the focused spatial/replay/API tests:
+  python -m pytest -q tests/webapp tests/simulation_studio tests/abm tests/execution
+
+Run the full test suite (your Windows environment has the DES dependencies):
+  python -m pytest -q
+
+Start the local browser workbench:
+  python -m webapp
+
+Open:
+  http://127.0.0.1:8765
+
+SPATIAL MODEL EXAMPLE
+See:
+  scenarios\spatial_neighbour_movement_abm.json
+
+This is a declarative ABM model-data example. To use it through the browser replay, include the spatial fields in an M8 ABM compilation profile linked to the intended conceptual project and revision, compile that profile, execute the resulting M8 artifact through M9, and select that M9 result in the ABM replay panel.
+
+M16 does not automatically turn an existing non-spatial profile into a spatial one. Existing workspaces and old artifacts remain unchanged.

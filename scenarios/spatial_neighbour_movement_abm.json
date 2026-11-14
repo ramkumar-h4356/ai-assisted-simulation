@@ -1,0 +1,61 @@
+{
+  "name": "Spatial Signal and Awareness",
+  "space": {
+    "width": 100,
+    "height": 100,
+    "boundary": "clamp"
+  },
+  "agents": [
+    {
+      "reference": "signal_source",
+      "agent_type": "beacon",
+      "state": "broadcasting",
+      "attributes": {"signal_strength": 1.0},
+      "position": {"x": 10, "y": 50}
+    },
+    {
+      "reference": "nearby_person",
+      "agent_type": "person",
+      "state": "unaware",
+      "attributes": {"awareness": 0},
+      "position": {"x": 16, "y": 50}
+    },
+    {
+      "reference": "distant_person",
+      "agent_type": "person",
+      "state": "unaware",
+      "attributes": {"awareness": 0},
+      "position": {"x": 80, "y": 50}
+    }
+  ],
+  "environment": {"attributes": {"unit": "model-space"}},
+  "relationships": [],
+  "behaviours": [
+    {
+      "rule_id": "beacon-drifts-east",
+      "agent_type": "beacon",
+      "condition": {"type": "agent_state_is", "state": "broadcasting"},
+      "actions": [{"type": "move_by", "dx": 2, "dy": 0}],
+      "probability": 1.0
+    },
+    {
+      "rule_id": "person-detects-nearby-signal",
+      "agent_type": "person",
+      "condition": {
+        "type": "spatial_neighbour_state_count",
+        "radius": 5,
+        "state": "broadcasting",
+        "operator": "gt",
+        "count": 0
+      },
+      "actions": [
+        {"type": "set_state", "state": "aware"},
+        {"type": "set_attribute", "attribute": "awareness", "value": 1}
+      ],
+      "probability": 1.0
+    }
+  ],
+  "activation": {"mode": "sequential", "order": "declaration"},
+  "termination": {"type": "max_steps", "value": 5},
+  "random_seed": 21
+}

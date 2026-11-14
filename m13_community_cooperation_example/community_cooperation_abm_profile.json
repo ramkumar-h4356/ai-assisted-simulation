@@ -1,0 +1,123 @@
+{
+  "profile_id": "cooperation-abm-profile",
+  "project_id": "m8-demo-cooperation",
+  "revision_id": "m8-demo-rev-2",
+  "paradigm": "agent_based",
+  "model_data": {
+    "name": "Cooperation experiment",
+    "agents": [
+      {
+        "reference": "person-1",
+        "agent_type": "Person",
+        "state": "active",
+        "attributes": {
+          "trust": 0.8,
+          "contributions": 0
+        }
+      },
+      {
+        "reference": "person-2",
+        "agent_type": "Person",
+        "state": "active",
+        "attributes": {
+          "trust": 0.4,
+          "contributions": 0
+        }
+      }
+    ],
+    "environment": {
+      "attributes": {
+        "resource_units": 5
+      }
+    },
+    "relationships": [
+      {
+        "source": "person-1",
+        "target": "person-2",
+        "relation_type": "peer",
+        "directed": false
+      }
+    ],
+    "behaviours": [
+      {
+        "rule_id": "cooperate-if-trust-high",
+        "agent_type": "Person",
+        "condition": {
+          "type": "agent_attribute_comparison",
+          "attribute": "trust",
+          "operator": "gt",
+          "value": 0.5
+        },
+        "actions": [
+          {
+            "type": "increment_attribute",
+            "attribute": "contributions",
+            "amount": 1
+          }
+        ],
+        "probability": 1.0
+      }
+    ],
+    "activation": {
+      "mode": "sequential",
+      "order": "declaration"
+    },
+    "termination": {
+      "type": "max_steps",
+      "value": 10
+    },
+    "random_seed": 7
+  },
+  "bindings": [
+    {
+      "target_path": "agents[0]",
+      "source": "conceptual_element",
+      "element_ids": [
+        "person"
+      ],
+      "note": "First explicit person instance."
+    },
+    {
+      "target_path": "agents[1]",
+      "source": "conceptual_element",
+      "element_ids": [
+        "person"
+      ],
+      "note": "Second explicit person instance."
+    },
+    {
+      "target_path": "relationships[0]",
+      "source": "conceptual_element",
+      "element_ids": [
+        "cooperates"
+      ],
+      "note": "Illustrative peer relationship."
+    },
+    {
+      "target_path": "behaviours[0]",
+      "source": "conceptual_element",
+      "element_ids": [
+        "cooperation"
+      ],
+      "note": "Implements the cooperation mechanism."
+    },
+    {
+      "target_path": "agents[0].attributes.trust",
+      "source": "user_parameter",
+      "element_ids": [],
+      "note": "Illustrative initial trust of 0.8."
+    },
+    {
+      "target_path": "agents[1].attributes.trust",
+      "source": "user_parameter",
+      "element_ids": [],
+      "note": "Illustrative initial trust of 0.4."
+    },
+    {
+      "target_path": "termination.value",
+      "source": "user_parameter",
+      "element_ids": [],
+      "note": "Experiment horizon of 10 steps."
+    }
+  ]
+}

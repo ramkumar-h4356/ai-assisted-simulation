@@ -28,6 +28,18 @@ def _validate_scalar(value: object, field_name: str) -> None:
         raise ValueError(f"{field_name} must be finite")
 
 
+def _finite_float(value: object, field_name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{field_name} must be numeric")
+    try:
+        number = float(value)
+    except (OverflowError, ValueError) as error:
+        raise ValueError(f"{field_name} must be finite") from error
+    if not isfinite(number):
+        raise ValueError(f"{field_name} must be finite")
+    return number
+
+
 def _freeze_attributes(values: Mapping[str, Scalar], field_name: str) -> Mapping[str, Scalar]:
     if not isinstance(values, Mapping):
         raise TypeError(f"{field_name} must be a mapping")
@@ -38,6 +50,141 @@ def _freeze_attributes(values: Mapping[str, Scalar], field_name: str) -> Mapping
         _validate_scalar(value, f"{field_name}[{key!r}]")
         copied[key] = value
     return MappingProxyType(copied)
+
+
+@dataclass(frozen=True, slots=True)
+class Position:
+    """A 2D coordinate in the model's spatial coordinate system."""
+
+    x: float
+    y: float
+
+    def __post_init__(self) -> None:
+        for name, value in (("x", self.x), ("y", self.y)):
+            object.__setattr__(self, name, _finite_float(value, f"position {name}"))
+
+
+class BoundaryMode(str, Enum):
+    """How movement beyond a spatial world's edge is handled."""
+
+    CLAMP = "clamp"
+    WRAP = "wrap"
+
+
+class CollisionResolution(str, Enum):
+    """Deterministic response when a movement path intersects an obstacle."""
+
+    BLOCK = "block"
+    SLIDE = "slide"
+
+
+@dataclass(frozen=True, slots=True)
+class RectangleObstacle:
+    """Static axis-aligned rectangular obstacle in model-space units."""
+
+    identifier: str
+    x: float
+    y: float
+    width: float
+    height: float
+
+    def __post_init__(self) -> None:
+        _non_empty_text(self.identifier, "obstacle identifier")
+        for name, value in (("x", self.x), ("y", self.y), ("width", self.width), ("height", self.height)):
+            number = _finite_float(value, f"rectangle obstacle {name}")
+            if name in {"width", "height"} and number <= 0:
+                raise ValueError(f"rectangle obstacle {name} must be positive")
+            if name in {"x", "y"} and number < 0:
+                raise ValueError(f"rectangle obstacle {name} cannot be negative")
+            object.__setattr__(self, name, number)
+
+
+@dataclass(frozen=True, slots=True)
+class CircleObstacle:
+    """Static circular obstacle, specified by centre and radius."""
+
+    identifier: str
+    x: float
+    y: float
+    radius: float
+
+    def __post_init__(self) -> None:
+        _non_empty_text(self.identifier, "obstacle identifier")
+        for name, value in (("x", self.x), ("y", self.y), ("radius", self.radius)):
+            number = _finite_float(value, f"circle obstacle {name}")
+            if number < 0 or (name == "radius" and number == 0):
+                raise ValueError(f"circle obstacle {name} must be positive" if name == "radius" else f"circle obstacle {name} cannot be negative")
+            object.__setattr__(self, name, number)
+
+
+SpatialObstacle: TypeAlias = RectangleObstacle | CircleObstacle
+
+
+@dataclass(frozen=True, slots=True)
+class SpatialSpace:
+    """A 2D world measured in model-defined units.
+
+    ``clamp`` keeps coordinates within the closed rectangle [0,width] ×
+    [0,height]. ``wrap`` treats opposite edges as adjacent and uses a
+    half-open rectangle [0,width) × [0,height).
+    """
+
+    width: float
+    height: float
+    boundary: BoundaryMode = BoundaryMode.CLAMP
+    obstacles: tuple[SpatialObstacle, ...] = ()
+    agent_collisions: bool = True
+    collision_resolution: CollisionResolution = CollisionResolution.BLOCK
+
+    def __post_init__(self) -> None:
+        for name, value in (("width", self.width), ("height", self.height)):
+            number = _finite_float(value, f"space {name}")
+            if number <= 0:
+                raise ValueError(f"space {name} must be positive and finite")
+            object.__setattr__(self, name, number)
+        if not isinstance(self.boundary, BoundaryMode):
+            raise TypeError("boundary must be a BoundaryMode")
+        if not isinstance(self.obstacles, tuple) or any(
+            not isinstance(item, (RectangleObstacle, CircleObstacle)) for item in self.obstacles
+        ):
+            raise TypeError("obstacles must be a tuple of supported obstacle instances")
+        if len({item.identifier for item in self.obstacles}) != len(self.obstacles):
+            raise ValueError("obstacle identifiers must be unique")
+        if not isinstance(self.agent_collisions, bool):
+            raise TypeError("agent_collisions must be a boolean")
+        if not isinstance(self.collision_resolution, CollisionResolution):
+            raise TypeError("collision_resolution must be a CollisionResolution")
+        for obstacle in self.obstacles:
+            if isinstance(obstacle, RectangleObstacle):
+                if obstacle.x + obstacle.width > self.width or obstacle.y + obstacle.height > self.height:
+                    raise ValueError(f"rectangle obstacle {obstacle.identifier!r} must lie inside the spatial world")
+            elif (
+                obstacle.x - obstacle.radius < 0
+                or obstacle.y - obstacle.radius < 0
+                or obstacle.x + obstacle.radius > self.width
+                or obstacle.y + obstacle.radius > self.height
+            ):
+                raise ValueError(f"circle obstacle {obstacle.identifier!r} must lie inside the spatial world")
+
+    def normalize(self, position: Position) -> Position:
+        """Apply the configured boundary policy to a proposed position."""
+        if not isinstance(position, Position):
+            raise TypeError("position must be a Position")
+        if self.boundary is BoundaryMode.WRAP:
+            return Position(position.x % self.width, position.y % self.height)
+        return Position(
+            min(self.width, max(0.0, position.x)),
+            min(self.height, max(0.0, position.y)),
+        )
+
+    def distance(self, left: Position, right: Position) -> float:
+        """Return Euclidean distance, using shortest wrapped deltas if needed."""
+        dx = abs(left.x - right.x)
+        dy = abs(left.y - right.y)
+        if self.boundary is BoundaryMode.WRAP:
+            dx = min(dx, self.width - dx)
+            dy = min(dy, self.height - dy)
+        return (dx * dx + dy * dy) ** 0.5
 
 
 class ComparisonOperator(str, Enum):
@@ -71,6 +218,9 @@ class Agent:
     agent_type: str
     state: str
     attributes: Mapping[str, Scalar] = field(default_factory=dict)
+    position: Position | None = None
+    radius: float = 0.0
+    max_step_distance: float | None = None
 
     def __post_init__(self) -> None:
         _non_empty_text(self.identifier, "agent identifier")
@@ -79,6 +229,17 @@ class Agent:
         object.__setattr__(
             self, "attributes", _freeze_attributes(self.attributes, "agent attributes")
         )
+        if self.position is not None and not isinstance(self.position, Position):
+            raise TypeError("agent position must be a Position or None")
+        radius = _finite_float(self.radius, "agent radius")
+        if radius < 0:
+            raise ValueError("agent radius must be non-negative")
+        object.__setattr__(self, "radius", radius)
+        if self.max_step_distance is not None:
+            distance = _finite_float(self.max_step_distance, "agent max_step_distance")
+            if distance <= 0:
+                raise ValueError("agent max_step_distance must be positive when provided")
+            object.__setattr__(self, "max_step_distance", distance)
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +323,29 @@ class RelatedAgentStateCount(Condition):
 
 
 @dataclass(frozen=True, slots=True)
+class SpatialNeighbourStateCount(Condition):
+    """Count other agents of a state within a Euclidean radius of the active agent."""
+
+    radius: float
+    state: str
+    operator: ComparisonOperator
+    count: int
+
+    def __post_init__(self) -> None:
+        radius = _finite_float(self.radius, "spatial neighbour radius")
+        if radius < 0:
+            raise ValueError("spatial neighbour radius must be finite and non-negative")
+        object.__setattr__(self, "radius", radius)
+        _non_empty_text(self.state, "spatial neighbour state")
+        if not isinstance(self.operator, ComparisonOperator):
+            raise TypeError("operator must be a ComparisonOperator")
+        if isinstance(self.count, bool) or not isinstance(self.count, int):
+            raise TypeError("spatial neighbour count must be an integer")
+        if self.count < 0:
+            raise ValueError("spatial neighbour count must be non-negative")
+
+
+@dataclass(frozen=True, slots=True)
 class AllOf(Condition):
     """Match when every nested condition matches."""
 
@@ -226,6 +410,62 @@ class IncrementAttribute(Action):
             raise TypeError("increment amount must be numeric")
         if not isfinite(self.amount):
             raise ValueError("increment amount must be finite")
+
+
+@dataclass(frozen=True, slots=True)
+class MoveBy(Action):
+    """Move the active agent by a relative x/y displacement."""
+
+    dx: float
+    dy: float
+
+    def __post_init__(self) -> None:
+        for name, value in (("dx", self.dx), ("dy", self.dy)):
+            object.__setattr__(self, name, _finite_float(value, f"movement {name}"))
+
+
+@dataclass(frozen=True, slots=True)
+class MoveTo(Action):
+    """Move the active agent to an absolute x/y coordinate."""
+
+    x: float
+    y: float
+
+    def __post_init__(self) -> None:
+        for name, value in (("x", self.x), ("y", self.y)):
+            object.__setattr__(self, name, _finite_float(value, f"movement target {name}"))
+
+
+class PathfindingAlgorithm(str, Enum):
+    """Route strategy for a bounded move-towards action."""
+
+    DIRECT = "direct"
+    ASTAR = "astar"
+
+
+@dataclass(frozen=True, slots=True)
+class MoveTowards(Action):
+    """Advance toward a destination by a bounded distance, optionally via A*."""
+
+    x: float
+    y: float
+    max_distance: float
+    pathfinding: PathfindingAlgorithm = PathfindingAlgorithm.ASTAR
+    grid_cell_size: float = 1.0
+
+    def __post_init__(self) -> None:
+        for name, value in (("x", self.x), ("y", self.y)):
+            object.__setattr__(self, name, _finite_float(value, f"movement target {name}"))
+        max_distance = _finite_float(self.max_distance, "move_towards max_distance")
+        grid_cell_size = _finite_float(self.grid_cell_size, "move_towards grid_cell_size")
+        if max_distance <= 0:
+            raise ValueError("move_towards max_distance must be positive")
+        if grid_cell_size <= 0:
+            raise ValueError("move_towards grid_cell_size must be positive")
+        object.__setattr__(self, "max_distance", max_distance)
+        object.__setattr__(self, "grid_cell_size", grid_cell_size)
+        if not isinstance(self.pathfinding, PathfindingAlgorithm):
+            raise TypeError("pathfinding must be a PathfindingAlgorithm")
 
 
 @dataclass(frozen=True, slots=True)
@@ -304,6 +544,7 @@ class AgentModel:
     behaviours: tuple[BehaviourRule, ...] = ()
     activation: ActivationPolicy = field(default_factory=ActivationPolicy)
     random_seed: int | None = None
+    space: SpatialSpace | None = None
 
     def __post_init__(self) -> None:
         _non_empty_text(self.name, "model name")
@@ -325,6 +566,8 @@ class AgentModel:
             raise TypeError("environment must be an Environment instance")
         if not isinstance(self.activation, ActivationPolicy):
             raise TypeError("activation must be an ActivationPolicy instance")
+        if self.space is not None and not isinstance(self.space, SpatialSpace):
+            raise TypeError("space must be a SpatialSpace or None")
         if not isinstance(self.termination, TerminationCondition):
             raise TypeError("termination must be a TerminationCondition instance")
         if self.random_seed is not None:

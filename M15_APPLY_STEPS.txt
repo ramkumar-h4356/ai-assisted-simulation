@@ -1,0 +1,48 @@
+M15 — INTERACTIVE ABM 2D STATE REPLAY
+====================================
+
+Before applying:
+1. Close the running M14 web application (Ctrl+C in its terminal).
+2. Back up your project folder or commit your current changes.
+3. Keep your existing workspaces/ directory. It is not included in this update.
+
+Apply:
+1. Extract M15_Updates.zip directly into:
+   D:\Project Simulator\simulator_real_reorganized
+2. Preserve folder structure and allow updated source files to replace the
+   existing M14 files when prompted. The update includes the M14.1
+   workbench/workspace.py Windows ZIP-import fix as part of the verified base.
+3. No new Python packages or frontend dependencies are required.
+
+Verify:
+  python -m pytest -q tests/simulation_studio tests/webapp tests/workbench
+  python -m compileall -q .
+  node --check webapp/static/app.js
+  python -m pytest -q
+
+The local build environment used for M15 did not have simpy/groq, so its
+reported broad regression command excluded tests/des. The user's Windows
+full-suite run is needed to confirm the final all-tests result.
+
+Run:
+  python -m webapp
+
+Open:
+  http://127.0.0.1:8765
+
+In the browser:
+1. Open the existing workspace (do not create a replacement).
+2. Import an M8 ABM compilation profile if it is not already present.
+3. Run M8 compilation and then M9 execution.
+4. In the M15 ABM 2D state replay panel, select that M9 execution result.
+5. Choose a run number and click Load 2D replay.
+6. Use Play/Pause, step buttons, speed selector and timeline slider.
+7. Select an agent node to inspect its state and attributes; review rule
+   evaluations for the current step in the inspector.
+
+Important semantics:
+- M15 currently replays ABM V1 only; DES replay is not included.
+- The node arrangement is deterministic display layout, not physical space.
+- ABM V1 does not yet model movement, collisions or spatial interactions.
+- M15 does not edit M8/M9 records or modify workspace artifacts.
+- The web application remains local-only; do not expose it to a network.

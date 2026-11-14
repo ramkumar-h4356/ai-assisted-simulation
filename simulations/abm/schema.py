@@ -19,14 +19,25 @@ from simulations.abm.model import (
     AgentStateIs,
     AllOf,
     AnyOf,
+    BoundaryMode,
     BehaviourRule,
+    CircleObstacle,
+    CollisionResolution,
     ComparisonOperator,
     Environment,
     IncrementAttribute,
     MaxSteps,
+    MoveBy,
+    MoveTo,
+    MoveTowards,
+    PathfindingAlgorithm,
+    Position,
+    RectangleObstacle,
     RelatedAgentStateCount,
     SetAttribute,
     SetState,
+    SpatialNeighbourStateCount,
+    SpatialSpace,
 )
 
 
@@ -102,6 +113,21 @@ def _parse_condition(value: Any, path: str):
             raise ABMModelDataError(f"{path}.count", "Count must be a non-negative integer.")
         return RelatedAgentStateCount(relation_type, state, operator, count)
 
+    if condition_type == "spatial_neighbour_state_count":
+        _check_keys(data, {"type", "radius", "state", "operator", "count"}, path)
+        radius = data.get("radius")
+        if isinstance(radius, bool) or not isinstance(radius, (int, float)):
+            raise ABMModelDataError(f"{path}.radius", "Radius must be a finite non-negative number.")
+        state = _required_text(data, "state", path)
+        operator = _parse_operator(data.get("operator"), f"{path}.operator")
+        count = data.get("count")
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise ABMModelDataError(f"{path}.count", "Count must be a non-negative integer.")
+        try:
+            return SpatialNeighbourStateCount(radius, state, operator, count)
+        except (TypeError, ValueError) as error:
+            raise ABMModelDataError(path, str(error)) from error
+
     if condition_type in {"all_of", "any_of"}:
         _check_keys(data, {"type", "conditions"}, path)
         children = _array(data.get("conditions"), f"{path}.conditions")
@@ -116,7 +142,7 @@ def _parse_condition(value: Any, path: str):
     raise ABMModelDataError(
         f"{path}.type",
         "Unsupported condition type. Use agent_state_is, agent_attribute_comparison, "
-        "related_agent_state_count, all_of, or any_of.",
+        "related_agent_state_count, spatial_neighbour_state_count, all_of, or any_of.",
     )
 
 
@@ -149,9 +175,36 @@ def _parse_action(value: Any, path: str):
         except (TypeError, ValueError) as error:
             raise ABMModelDataError(f"{path}.amount", str(error)) from error
 
+    if action_type == "move_by":
+        _check_keys(data, {"type", "dx", "dy"}, path)
+        dx, dy = data.get("dx"), data.get("dy")
+        try:
+            return MoveBy(dx, dy)
+        except (TypeError, ValueError) as error:
+            raise ABMModelDataError(path, str(error)) from error
+
+    if action_type == "move_to":
+        _check_keys(data, {"type", "x", "y"}, path)
+        x, y = data.get("x"), data.get("y")
+        try:
+            return MoveTo(x, y)
+        except (TypeError, ValueError) as error:
+            raise ABMModelDataError(path, str(error)) from error
+
+    if action_type == "move_towards":
+        _check_keys(data, {"type", "x", "y", "max_distance", "pathfinding", "grid_cell_size"}, path)
+        try:
+            return MoveTowards(
+                data.get("x"), data.get("y"), data.get("max_distance"),
+                PathfindingAlgorithm(data.get("pathfinding", "astar")),
+                data.get("grid_cell_size", 1.0),
+            )
+        except (TypeError, ValueError) as error:
+            raise ABMModelDataError(path, str(error)) from error
+
     raise ABMModelDataError(
         f"{path}.type",
-        "Unsupported action type. Use set_state, set_attribute, or increment_attribute.",
+        "Unsupported action type. Use set_state, set_attribute, increment_attribute, move_by, or move_to.",
     )
 
 
@@ -199,7 +252,7 @@ def agent_model_from_dict(data: dict[str, Any]) -> AgentModel:
     data = normalize_agent_model_data(data)
     _check_keys(
         data,
-        {"name", "agents", "environment", "relationships", "behaviours", "activation", "termination", "random_seed"},
+        {"name", "agents", "environment", "relationships", "behaviours", "activation", "termination", "random_seed", "space"},
         "model",
     )
     name = _required_text(data, "name", "model")
@@ -216,7 +269,7 @@ def agent_model_from_dict(data: dict[str, Any]) -> AgentModel:
     for index, raw in enumerate(raw_agents):
         path = f"agents[{index}]"
         item = _object(raw, path)
-        _check_keys(item, {"reference", "agent_type", "state", "attributes"}, path)
+        _check_keys(item, {"reference", "agent_type", "state", "attributes", "position", "radius", "max_step_distance"}, path)
         reference = _required_text(item, "reference", path)
         if reference in references:
             raise ABMModelDataError(f"{path}.reference", f"Duplicate agent reference {reference!r}.")
@@ -225,10 +278,23 @@ def agent_model_from_dict(data: dict[str, Any]) -> AgentModel:
         attributes = item.get("attributes", {})
         if not isinstance(attributes, dict):
             raise ABMModelDataError(f"{path}.attributes", "Attributes must be a JSON object.")
+        position = None
+        if item.get("position") is not None:
+            raw_position = _object(item.get("position"), f"{path}.position")
+            _check_keys(raw_position, {"x", "y"}, f"{path}.position")
+            if "x" not in raw_position or "y" not in raw_position:
+                raise ABMModelDataError(f"{path}.position", "Both x and y coordinates are required.")
+            try:
+                position = Position(raw_position["x"], raw_position["y"])
+            except (TypeError, ValueError) as error:
+                raise ABMModelDataError(f"{path}.position", str(error)) from error
         identifier = f"agent-{index + 1}"
         references[reference] = identifier
         try:
-            agents.append(Agent(identifier, agent_type, state, attributes))
+            agents.append(Agent(
+                identifier, agent_type, state, attributes, position,
+                item.get("radius", 0.0), item.get("max_step_distance"),
+            ))
         except (TypeError, ValueError) as error:
             raise ABMModelDataError(path, str(error)) from error
 
@@ -317,6 +383,55 @@ def agent_model_from_dict(data: dict[str, Any]) -> AgentModel:
     ):
         raise ABMModelDataError("random_seed", "Random seed must be a non-negative integer or null.")
 
+    raw_space = data.get("space")
+    space = None
+    if raw_space is not None:
+        raw_space = _object(raw_space, "space")
+        _check_keys(
+            raw_space,
+            {"width", "height", "boundary", "obstacles", "agent_collisions", "collision_resolution"},
+            "space",
+        )
+        if "width" not in raw_space or "height" not in raw_space:
+            raise ABMModelDataError("space", "Both width and height are required.")
+        try:
+            boundary = BoundaryMode(raw_space.get("boundary", "clamp"))
+            collision_resolution = CollisionResolution(raw_space.get("collision_resolution", "block"))
+            raw_obstacles = _array(raw_space.get("obstacles", []), "space.obstacles")
+            obstacles = []
+            for obstacle_index, raw_obstacle in enumerate(raw_obstacles):
+                obstacle_path = f"space.obstacles[{obstacle_index}]"
+                obstacle = _object(raw_obstacle, obstacle_path)
+                obstacle_type = obstacle.get("type")
+                if obstacle_type == "rectangle":
+                    _check_keys(obstacle, {"id", "type", "x", "y", "width", "height"}, obstacle_path)
+                    obstacles.append(RectangleObstacle(
+                        _required_text(obstacle, "id", obstacle_path),
+                        obstacle.get("x"), obstacle.get("y"),
+                        obstacle.get("width"), obstacle.get("height"),
+                    ))
+                elif obstacle_type == "circle":
+                    _check_keys(obstacle, {"id", "type", "x", "y", "radius"}, obstacle_path)
+                    obstacles.append(CircleObstacle(
+                        _required_text(obstacle, "id", obstacle_path),
+                        obstacle.get("x"), obstacle.get("y"), obstacle.get("radius"),
+                    ))
+                else:
+                    raise ABMModelDataError(
+                        f"{obstacle_path}.type", "Obstacle type must be rectangle or circle."
+                    )
+            agent_collisions = raw_space.get("agent_collisions", True)
+            if not isinstance(agent_collisions, bool):
+                raise ABMModelDataError("space.agent_collisions", "agent_collisions must be true or false.")
+            space = SpatialSpace(
+                raw_space["width"], raw_space["height"], boundary,
+                tuple(obstacles), agent_collisions, collision_resolution,
+            )
+        except ABMModelDataError:
+            raise
+        except (TypeError, ValueError) as error:
+            raise ABMModelDataError("space", str(error)) from error
+
     try:
         return AgentModel(
             name=name,
@@ -327,6 +442,7 @@ def agent_model_from_dict(data: dict[str, Any]) -> AgentModel:
             activation=activation,
             termination=MaxSteps(max_steps),
             random_seed=random_seed,
+            space=space,
         )
     except (TypeError, ValueError) as error:
         raise ABMModelDataError("model", str(error)) from error

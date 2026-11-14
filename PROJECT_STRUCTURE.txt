@@ -224,3 +224,70 @@ scenarios/uncertainty/
 M11_ARCHITECTURE.md    Sampling, execution, analysis flow and statistical limitations
 MILESTONE11_REPORT.md  M11 implementation summary and scope boundaries
 M11_TEST_REPORT.md     Focused test coverage and environment limitations
+
+
+Milestone 12 additions:
+visualization/
+  __init__.py       Public M12 bundle, builder, renderer and persistence APIs
+  models.py         Validated visualization bundle contract with exact M8/M9 provenance
+  builder.py        M9 metric series, DES event/entity/resource views, ABM state/attribute summaries, optional M10/M11 integration and trace downsampling
+  serialization.py  Fingerprinted JSON persistence and dependency-free offline HTML dashboard generation
+tests/visualization/
+  test_builder.py       ABM/DES adapters, metric series, M10/M11 provenance, tamper checks and HTML safety
+  test_serialization.py Bundle round-trip, fingerprint verification, strict parsing and HTML output
+scenarios/visualization/
+  README.md             Dashboard usage, source-report requirements and visualization limitations
+M12_ARCHITECTURE.md     Data flow, trace adapters, browser interaction and provenance boundaries
+MILESTONE12_REPORT.md   M12 implementation summary and scope boundaries
+M12_TEST_REPORT.md      Focused tests, integration tests and environment limitations
+
+Milestone 13 additions:
+workbench/
+  __init__.py       Public workspace and orchestration APIs
+  models.py         Workspace, artifact, audit and workflow contracts
+  serialization.py  Strict workspace manifest JSON persistence
+  validators.py     Typed validation adapters for M4-M12 artifacts
+  workspace.py      Workspace storage, lineage, integrity and ZIP portability
+  extensions.py     Controlled DES/ABM simulation paradigm adapter registry
+  service.py        M5/M6 integration and M7-M12 project-scoped orchestration
+  cli.py            Interactive persistent project workbench
+  README.md         Project lifecycle, workspace and extension contracts
+tests/workbench/    Workspace, lineage, lifecycle and archive safety tests
+M13_ARCHITECTURE.md M13 service boundaries and provenance model
+MILESTONE13_REPORT.md M13 delivery summary and scope boundaries
+M13_TEST_REPORT.md  M13 test coverage and dependency limitations
+
+Milestone 14 additions:
+webapp/
+  __init__.py       Lazy application factory export
+  __main__.py       Local Uvicorn runner with loopback-only host enforcement
+  app.py            FastAPI application, versioned API, uploads and safe artifact access
+  static/
+    index.html      Browser workbench structure
+    styles.css      Responsive local UI styling
+    app.js          Same-origin API client and workflow interactions
+  README.md         Local startup instructions, API routes and security boundary
+tests/webapp/
+  test_api.py       Workspace CRUD, upload limits, M7-M12 ABM API flow, preview and export
+M14_ARCHITECTURE.md API/UI system boundary, security and lifecycle flow
+MILESTONE14_REPORT.md M14 implementation summary and scope boundaries
+M14_TEST_REPORT.md  Test results and environment limitations
+
+M14 also fixes a Windows long-path defect in workbench/workspace.py by using a
+short same-directory temporary filename for atomic artifact copying.
+
+
+Milestone 15 additions:
+simulation_studio/
+  __init__.py       Public M15 replay API
+  replay.py         M8/M9 integrity and provenance checks; ABM frame, relationship and transition scene builder
+tests/simulation_studio/
+  test_replay.py    Deterministic replay, M8/M9 lineage, selected-run and paradigm validation
+webapp/
+  app.py            M15 exact-lineage ABM replay endpoint
+  static/index.html M15 2D replay panel and timeline controls
+  static/styles.css Responsive replay canvas, control and inspector layout
+  static/app.js     Canvas renderer, step playback, speed controls and agent/rule inspectors
+M15_ARCHITECTURE.md   Replay architecture, trace semantics and spatial limitations
+MILESTONE15_REPORT.md M15 implementation summary and scope boundaries
+M15_TEST_REPORT.md   Focused and non-DES regression test results

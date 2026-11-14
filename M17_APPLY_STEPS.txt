@@ -1,0 +1,31 @@
+M17 — Apply the Advanced Spatial Mechanics update
+
+1. Back up or commit your current M16 project.
+2. Download M17_Updates.zip.
+3. Extract its contents directly into:
+   D:\Project Simulator\simulator_real_reorganized
+4. Allow the listed source files to be replaced.
+5. Do not delete or replace your existing workspaces directory.
+6. In PowerShell, from the project root, run:
+
+   python -m pytest -q tests/abm tests/simulation_studio tests/execution tests/webapp
+   python -m pytest -q
+
+7. Run the included spatial example from Python:
+
+   python -c "import json; from pathlib import Path; from simulations.abm.schema import agent_model_from_dict; from simulations.abm.engine import run_agent_model; p=Path('scenarios/spatial_obstacles_pathfinding_abm.json'); m=agent_model_from_dict(json.loads(p.read_text(encoding='utf-8'))); r=run_agent_model(m); print('Final position:', r.final_agents[0].position); print('Movement events:', len(r.movement_events))"
+
+   Expected output includes final position Position(x=18.0, y=10.0) and 12 movement events.
+
+8. Start the existing browser workbench if needed:
+
+   python -m webapp
+
+   Open http://127.0.0.1:8765
+
+Important:
+- This is an update-only package, not a replacement workspace export.
+- Existing workspaces and project artifacts are not included in the ZIP and must remain in place.
+- M17 adds engine features; it does not redesign the UI.
+- A* uses clamp-boundary worlds and has a 100,000-cell safety limit.
+- Read M17_ARCHITECTURE.md and simulations/abm/README.md for the complete model contract.

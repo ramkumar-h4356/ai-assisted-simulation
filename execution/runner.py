@@ -57,8 +57,15 @@ def _estimate_trace_records(artifact: CompilationArtifact, model_data: dict[str,
     if artifact.paradigm is CompilationParadigm.AGENT_BASED:
         agents = len(data.get("agents", []))
         steps = data.get("termination", {}).get("value", 0)
-        rules = len(data.get("behaviours", []))
-        return agents * (steps + 1) + agents * steps * rules
+        behaviours = data.get("behaviours", [])
+        rules = len(behaviours)
+        movement_actions = sum(
+            1
+            for rule in behaviours if isinstance(rule, dict)
+            for action in rule.get("actions", []) if isinstance(action, dict)
+            if action.get("type") in {"move_by", "move_to", "move_towards"}
+        )
+        return agents * (steps + 1) + agents * steps * (rules + movement_actions)
     if artifact.paradigm is CompilationParadigm.DISCRETE_EVENT:
         stage_count = 0
         for job in data.get("jobs", []):
@@ -181,6 +188,12 @@ def _capture_trace(native_result: Any, paradigm: CompilationParadigm) -> dict[st
                         "agent_type": agent.agent_type,
                         "state": agent.state,
                         "attributes": dict(agent.attributes),
+                        "radius": agent.radius,
+                        "position": (
+                            None
+                            if agent.position is None
+                            else {"x": agent.position.x, "y": agent.position.y}
+                        ),
                     }
                     for agent in snapshot.agents
                 ],
@@ -198,9 +211,27 @@ def _capture_trace(native_result: Any, paradigm: CompilationParadigm) -> dict[st
             }
             for item in native_result.rule_evaluations
         ]
+        movement_events = [
+            {
+                "step": item.step,
+                "agent_id": item.agent_id,
+                "rule_id": item.rule_id,
+                "action_index": item.action_index,
+                "action_type": item.action_type,
+                "requested_target": {"x": item.requested_target.x, "y": item.requested_target.y},
+                "actual_position": {"x": item.actual_position.x, "y": item.actual_position.y},
+                "status": item.status,
+                "reason": item.reason,
+                "path": [{"x": point.x, "y": point.y} for point in item.path],
+                "distance_travelled": item.distance_travelled,
+                "distance_limit_reached": item.distance_limit_reached,
+            }
+            for item in getattr(native_result, "movement_events", ())
+        ]
         return _json_safe({
             "history": history,
             "rule_evaluations": evaluations,
+            "movement_events": movement_events,
             "final_state_counts": dict(native_result.final_state_counts),
         })
 

@@ -1,0 +1,102 @@
+{
+  "id": "m8-demo-cooperation",
+  "title": "Shared resource cooperation",
+  "original_statement": "People cooperate to manage a shared resource.",
+  "current_revision_id": "m8-demo-rev-2",
+  "revisions": [
+    {
+      "id": "m8-demo-rev-1",
+      "version": 1,
+      "created_at": "2026-11-14T07:40:57.295835+00:00",
+      "change_summary": "Initial capture of the original idea.",
+      "working_statement": "People cooperate to manage a shared resource.",
+      "parent_revision_id": null,
+      "concepts": [],
+      "properties": [],
+      "relationships": [],
+      "mechanisms": [],
+      "hypotheses": [],
+      "assumptions": [],
+      "constraints": [],
+      "evidence_references": [],
+      "mappings": [],
+      "open_questions": [],
+      "provenance_records": []
+    },
+    {
+      "id": "m8-demo-rev-2",
+      "version": 2,
+      "created_at": "2026-11-14T07:40:57.295867+00:00",
+      "change_summary": "Formalize a simple executable cooperation example.",
+      "working_statement": "People cooperate to manage a shared resource.",
+      "parent_revision_id": "m8-demo-rev-1",
+      "concepts": [
+        {
+          "id": "person",
+          "name": "Person",
+          "kind": "actor",
+          "origin": "user_defined",
+          "definition": "An autonomous community participant.",
+          "status": "defined",
+          "source_note": ""
+        },
+        {
+          "id": "resource",
+          "name": "Shared resource",
+          "kind": "resource",
+          "origin": "user_defined",
+          "definition": "A limited shared resource.",
+          "status": "defined",
+          "source_note": ""
+        }
+      ],
+      "properties": [
+        {
+          "id": "trust",
+          "concept_id": "person",
+          "name": "Trust level",
+          "data_type": "number",
+          "unit": "0-1 scale",
+          "definition": "A participant's trust level.",
+          "status": "defined"
+        }
+      ],
+      "relationships": [
+        {
+          "id": "cooperates",
+          "source_concept_id": "person",
+          "target_concept_id": "resource",
+          "label": "contributes to",
+          "description": "A person contributes to the shared resource.",
+          "directed": true,
+          "status": "defined"
+        }
+      ],
+      "mechanisms": [
+        {
+          "id": "cooperation",
+          "name": "Agent cooperation",
+          "description": "A participant chooses whether to cooperate.",
+          "input_concept_ids": [
+            "person",
+            "resource"
+          ],
+          "output_concept_ids": [
+            "resource"
+          ],
+          "trigger_description": "When a participant observes resource availability.",
+          "effect_description": "The participant contributes or withholds a resource unit.",
+          "operational_definition": "If trust is above the threshold and a unit is available, contribute one unit; otherwise do not contribute.",
+          "status": "defined"
+        }
+      ],
+      "hypotheses": [],
+      "assumptions": [],
+      "constraints": [],
+      "evidence_references": [],
+      "mappings": [],
+      "open_questions": [],
+      "provenance_records": []
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "name": "Spatial Navigation Around Obstacles",
+  "space": {
+    "width": 20,
+    "height": 20,
+    "boundary": "clamp",
+    "agent_collisions": true,
+    "collision_resolution": "block",
+    "obstacles": [
+      {
+        "id": "central-wall",
+        "type": "rectangle",
+        "x": 8,
+        "y": 3,
+        "width": 2,
+        "height": 13
+      },
+      {
+        "id": "rock",
+        "type": "circle",
+        "x": 14,
+        "y": 5,
+        "radius": 1
+      }
+    ]
+  },
+  "agents": [
+    {
+      "reference": "navigator",
+      "agent_type": "person",
+      "state": "navigating",
+      "attributes": {},
+      "position": {
+        "x": 2,
+        "y": 10
+      },
+      "radius": 0.4,
+      "max_step_distance": 2.5
+    }
+  ],
+  "environment": {
+    "attributes": {
+      "coordinate_unit": "model-defined"
+    }
+  },
+  "relationships": [],
+  "behaviours": [
+    {
+      "rule_id": "navigate-toward-destination",
+      "agent_type": "person",
+      "condition": {
+        "type": "agent_state_is",
+        "state": "navigating"
+      },
+      "actions": [
+        {
+          "type": "move_towards",
+          "x": 18,
+          "y": 10,
+          "max_distance": 2.5,
+          "pathfinding": "astar",
+          "grid_cell_size": 1
+        }
+      ],
+      "probability": 1.0
+    }
+  ],
+  "activation": {
+    "mode": "sequential",
+    "order": "declaration"
+  },
+  "termination": {
+    "type": "max_steps",
+    "value": 12
+  },
+  "random_seed": 17
+}
