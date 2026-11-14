@@ -1,0 +1,33 @@
+M23 — Objective-Driven Simulation Optimization
+
+1. Save M23_Updates.zip in:
+   D:\Project Simulator\milestones
+
+2. In PowerShell:
+   cd "D:\Project Simulator\simulator_real_reorganized"
+   $source = "D:\Project Simulator\milestones\M23_Updates.zip"
+   Test-Path $source
+
+3. If Test-Path returns True, extract:
+   Expand-Archive -LiteralPath $source -DestinationPath . -Force
+
+4. Verify focused M23 tests:
+   python -m pytest -q tests/optimization
+
+5. Verify the M10/M11 and workspace/API regression paths:
+   python -m pytest -q tests/experimentation tests/uncertainty tests/workbench tests/webapp
+
+6. Verify DES replay compatibility:
+   python -m pytest -q tests/des/test_replay.py tests/simulation_studio/test_des_replay.py
+
+7. Check the interactive CLI integration and standalone CLI:
+   python -m py_compile main.py optimization\*.py
+   python -m optimization.cli --help
+
+8. Run the complete project suite:
+   python -m pytest -q
+
+Do not commit until the complete Windows test suite passes.
+The M23 example plan at scenarios/optimization/abm_random_search_plan.json
+is illustrative. Its parameter paths and objective metric must match the
+selected M8 ABM artifact. Use only explicit numeric M8 user_parameter paths.

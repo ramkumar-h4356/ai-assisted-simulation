@@ -1071,6 +1071,196 @@ def inspect_analysis_report():
         print(f"\nAnalysis note: {warning}")
     print(f"\nReport integrity verified: {report_path}")
 
+
+def run_optimization_workflow():
+    """Run M23 bounded objective-driven optimization through M9."""
+    from pathlib import Path
+    from compilation import load_artifact
+    from execution import save_result
+    from optimization import export_summary_csv, load_plan, optimize_parameters, save_report
+
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs"
+    artifact_candidates = sorted(
+        output_dir.glob("*_m8_*_specification*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+
+    print("\n--- M23: Objective-Driven Simulation Optimization ---")
+    if artifact_candidates:
+        print("Recent M8 artifact candidates:")
+        for index, candidate in enumerate(artifact_candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nArtifact number or M8 artifact JSON path: ").strip().strip('"')
+    if not selection:
+        print("No artifact selected.")
+        return
+    if selection.isdigit() and artifact_candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(artifact_candidates)):
+            print("Invalid artifact number.")
+            return
+        artifact_path = artifact_candidates[index - 1]
+    else:
+        artifact_path = Path(selection).expanduser()
+        if not artifact_path.is_absolute():
+            artifact_path = (Path.cwd() / artifact_path).resolve()
+    try:
+        artifact = load_artifact(artifact_path)
+    except Exception as error:
+        print(f"Could not load or verify the M8 artifact: {error}")
+        return
+
+    print(f"\nProject: {artifact.project_title}")
+    print(f"Revision: {artifact.revision_id} (v{artifact.revision_version})")
+    print(f"Paradigm: {artifact.paradigm.value} | Backend: {artifact.backend_name}")
+    print("Only numeric fields explicitly bound as M8 user_parameter can be optimized.")
+    plan_path_text = input("Path to M23 optimization-plan JSON: ").strip().strip('"')
+    if not plan_path_text:
+        print("No optimization plan selected.")
+        return
+    plan_path = Path(plan_path_text).expanduser()
+    if not plan_path.is_absolute():
+        plan_path = (Path.cwd() / plan_path).resolve()
+    try:
+        plan = load_plan(plan_path)
+    except Exception as error:
+        print(f"Could not load M23 plan: {error}")
+        return
+
+    print(f"\nAlgorithm: uniform random search")
+    print(f"Objective: {plan.objective.metric_name} ({plan.objective.direction})")
+    print(f"Search seed: {plan.search_seed}")
+    print(f"Random candidates: {plan.candidate_count}; baseline included: {plan.include_baseline}")
+    print(f"Replications per candidate: {plan.replications}; total M9 executions: "
+          f"{(plan.candidate_count + int(plan.include_baseline)) * plan.replications}")
+    for parameter in plan.search_parameters:
+        print(f"  {parameter.target_path}: [{parameter.lower}, {parameter.upper}]")
+    for constraint in plan.constraints:
+        expression = f"{constraint.operator} {constraint.threshold}"
+        if constraint.operator == "between":
+            expression = f"between {constraint.threshold} and {constraint.upper_threshold}"
+        print(f"  Constraint {constraint.metric_name}: {expression}")
+
+    execution_base_seed = None
+    if artifact.paradigm.value == "agent_based":
+        seed_text = input("ABM execution base seed (blank uses compiled model seed): ").strip()
+        if seed_text:
+            try:
+                execution_base_seed = int(seed_text)
+                if execution_base_seed < 0:
+                    raise ValueError
+            except ValueError:
+                print("Execution base seed must be a non-negative integer.")
+                return
+    confirm = input("Start this optimization? [y/N]: ").strip().lower()
+    if confirm != "y":
+        print("Optimization cancelled; no simulation was run.")
+        return
+
+    try:
+        result, report = optimize_parameters(artifact, plan, execution_base_seed=execution_base_seed)
+    except Exception as error:
+        print(f"Optimization rejected or failed: {error}")
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    import re
+    safe_project = re.sub(r"[^A-Za-z0-9._-]+", "_", artifact.project_id).strip("._-") or "project"
+    base = output_dir / f"{safe_project}_m23_optimization"
+    result_path = output_dir / f"{safe_project}_m23_m9_execution.json"
+    report_path = base.with_suffix(".json")
+    csv_path = base.with_suffix(".csv")
+    version = 2
+    while result_path.exists() or report_path.exists() or csv_path.exists():
+        result_path = output_dir / f"{safe_project}_m23_m9_execution_v{version}.json"
+        report_path = output_dir / f"{artifact.project_id}_m23_optimization_v{version}.json"
+        csv_path = output_dir / f"{artifact.project_id}_m23_optimization_v{version}.csv"
+        version += 1
+    save_result(result, result_path)
+    save_report(report, report_path)
+    export_summary_csv(report, csv_path)
+    print("\n--- M23 Optimization Summary ---")
+    print(f"Candidates: {len(report.candidates)} | M9 runs: {len(result.runs)}")
+    if report.best_parameter_set is None:
+        print("No candidate satisfied all constraints and completion requirements.")
+    else:
+        best = next(item for item in report.candidates if item.parameter_set == report.best_parameter_set)
+        print(f"Best candidate: {best.parameter_set}")
+        print(f"Objective mean: {best.objective_mean:.8g}")
+        print(f"Parameters: {best.parameters}")
+        if report.objective_improvement is not None:
+            print(f"Improvement over feasible baseline: {report.objective_improvement:+.8g}")
+    for warning in report.warnings:
+        print(f"\nOptimization note: {warning}")
+    print(f"\nM9 result: {result_path}")
+    print(f"M23 report: {report_path}")
+    print(f"Candidate CSV: {csv_path}")
+
+
+def inspect_optimization_report():
+    """Inspect a saved, integrity-verified M23 optimization report."""
+    from pathlib import Path
+    from optimization import load_report
+
+    output_dir = Path(__file__).resolve().parent / "outputs"
+    candidates = sorted(
+        output_dir.glob("*_m23_optimization*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+    print("\n--- Inspect M23 Optimization Report ---")
+    if candidates:
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nReport number or M23 JSON path: ").strip().strip('"')
+    if not selection:
+        print("No report selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid report number.")
+            return
+        report_path = candidates[index - 1]
+    else:
+        report_path = Path(selection).expanduser()
+        if not report_path.is_absolute():
+            report_path = (Path.cwd() / report_path).resolve()
+    try:
+        report = load_report(report_path)
+    except Exception as error:
+        print(f"Could not load or verify M23 report: {error}")
+        return
+
+    print(f"\nProject: {report.project_title}")
+    print(f"Revision: {report.revision_id} (v{report.revision_version})")
+    print(f"Paradigm: {report.paradigm} | Backend: {report.backend_name}")
+    print(f"Objective: {report.plan.objective.metric_name} ({report.plan.objective.direction})")
+    print(f"Candidates: {len(report.candidates)} | Search seed: {report.plan.search_seed}")
+    print("\nCandidate ranking:")
+    ranked = sorted(
+        report.candidates,
+        key=lambda item: (
+            not item.feasible,
+            (item.objective_mean if report.plan.objective.direction == "minimize" else -item.objective_mean)
+            if item.objective_mean is not None else float("inf"),
+        ),
+    )
+    for item in ranked:
+        value = f"{item.objective_mean:.8g}" if item.objective_mean is not None else "unavailable"
+        print(f"  {item.parameter_set}: objective={value}; feasible={item.feasible}; status={item.status}; parameters={item.parameters}")
+        for constraint in item.constraints:
+            measured = f"{constraint.measured_mean:.8g}" if constraint.measured_mean is not None else "unavailable"
+            print(f"    {constraint.metric_name}: measured={measured}, satisfied={constraint.satisfied}")
+    print(f"\nBest candidate: {report.best_parameter_set or 'none'}")
+    if report.objective_improvement is not None:
+        print(f"Improvement over feasible baseline: {report.objective_improvement:+.8g}")
+    for warning in report.warnings:
+        print(f"\nOptimization note: {warning}")
+    print(f"\nReport integrity verified: {report_path}")
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
@@ -1091,8 +1281,10 @@ def main():
     print("15. Build an interactive visualization dashboard from M9/M10/M11 results")
     print("16. Open a saved M12 dashboard in your browser")
     print("17. Open the M13 project workbench")
+    print("18. Run M23 objective-driven parameter optimization")
+    print("19. Inspect a saved M23 optimization report")
 
-    choice = input("\nChoose an option (1-17): ").strip()
+    choice = input("\nChoose an option (1-19): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -1129,8 +1321,12 @@ def main():
     elif choice == "17":
         from workbench.cli import run_workbench
         run_workbench()
+    elif choice == "18":
+        run_optimization_workflow()
+    elif choice == "19":
+        inspect_optimization_report()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 17.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 19.")
 
 
 

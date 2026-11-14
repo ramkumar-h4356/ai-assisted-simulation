@@ -408,3 +408,22 @@ M22_ARCHITECTURE.md     System dynamics model and integration architecture
 MILESTONE22_REPORT.md   M22 implementation summary and scope boundaries
 M22_TEST_REPORT.md     M22 focused and regression verification
 M22_APPLY_STEPS.txt    Windows update and verification commands
+
+Milestone 23 additions:
+optimization/
+  models.py       Validated numeric search bounds, objective, metric constraints, plan and report contracts
+  search.py       Seeded bounded random candidate generation for explicit M8 user_parameter bindings
+  engine.py       M9-backed candidate execution, objective aggregation, constraint filtering and best-candidate selection
+  serialization.py Strict plan/report JSON, SHA-256 fingerprinting, atomic persistence and candidate CSV export
+  cli.py          Non-interactive M23 command-line runner
+  README.md       Python API, CLI, plan format, interpretation and V1 boundaries
+tests/optimization/
+  test_models_and_search.py Search contract, deterministic sampling, bounds, binding and execution-budget checks
+  test_engine_and_serialization.py M9-backed ABM/mathematical/data-driven/system-dynamics optimization, constraints and report integrity
+scenarios/optimization/
+  abm_random_search_plan.json  Illustrative user-authored ABM objective/search plan (paths must match selected M8 artifact)
+main.py             M23 option 18 optimization workflow and option 19 report inspection
+M23_ARCHITECTURE.md Objective search architecture, M9 integration, report model, plan format and limitations
+MILESTONE23_REPORT.md M23 implementation summary and interpretation boundaries
+M23_TEST_REPORT.md  M23 focused and regression test results and verification boundary
+M23_APPLY_STEPS.txt Instructions to apply and verify the M23 update

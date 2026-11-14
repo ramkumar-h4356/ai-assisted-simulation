@@ -77,7 +77,7 @@ tests/
 2. Install dependencies: `python -m pip install -r requirements-dev.txt`.
 3. Copy `.env.example` to `.env` and set `GROQ_API_KEY`.
 4. Run tests: `python -m pytest`.
-5. Start the CLI: `python main.py` (option 17 opens the M13 Project Workbench).
+5. Start the CLI: `python main.py` (option 17 opens the M13 Project Workbench; options 18–19 run/inspect M23 optimization).
 6. The standalone workspace manager is also available with `python -m workbench`.
 7. Start the M14 browser workbench with `python -m webapp`, then open `http://127.0.0.1:8765`.
 
@@ -225,3 +225,25 @@ M21 evaluates one-step predictions on a chronological holdout segment and then c
 ## System dynamics simulation (M22)
 
 M22 adds deterministic stock-and-flow execution with named stocks, directed inflows/outflows/transfers, optional auxiliary equations, parameters and fixed-step Euler, Heun or RK4 integration. Flow rates are non-negative and direction is represented explicitly with source and target stocks. Auxiliary equations are dependency-ordered and circular auxiliary definitions are rejected. Each saved M9 trace includes stock levels, auxiliary values, instantaneous flow rates, stock summaries and trapezoidally integrated cumulative flow. The capability is available through M7 readiness, M8 compilation and provenance, M9 execution, and the M13 built-in extension registry. V1 does not yet include delay structures, table functions, stochastic/hybrid flows, automated feedback-loop discovery, dimensional unit algebra, or adaptive/stiff solvers. Example: `python -m simulations.system_dynamics.demo`. See `simulations/system_dynamics/README.md`, `M22_ARCHITECTURE.md`, `MILESTONE22_REPORT.md` and `M22_TEST_REPORT.md`.
+
+## Objective-driven simulation optimization (M23)
+
+M23 adds bounded, seeded uniform random search over numeric M8 `user_parameter`
+bindings. A plan specifies one objective metric to minimize or maximize,
+parameter bounds, an optional compiled baseline, replications and optional
+metric constraints. All candidates execute through the same integrity-checked
+M9 service; the resulting M9 execution JSON, M23 fingerprinted report and CSV
+candidate table are saved separately. The M23 report preserves the exact M8
+artifact/revision and M9 result fingerprint. The optimizer supports the M9
+backends implemented at this milestone: DES, ABM, mathematical, data-driven
+and system dynamics.
+
+M23 complements M10 grid comparisons and M11 uncertainty/sensitivity
+analysis; it does not replace either. V1 is single-objective random search,
+not a global-optimum guarantee. ABM candidates use M9's sequential seeds and
+are not paired common-random-number experiments. Results are conditional on
+the user-selected model, bounds, objective, constraints and execution plan.
+Choose option 18 in `python main.py` to run optimization and option 19 to
+inspect a saved report. A non-interactive CLI is available with
+`python -m optimization.cli --help`. See `optimization/README.md`,
+`M23_ARCHITECTURE.md`, `M23_TEST_REPORT.md` and `MILESTONE23_REPORT.md`.

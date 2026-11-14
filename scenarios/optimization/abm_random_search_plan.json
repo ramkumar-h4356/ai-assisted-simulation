@@ -1,0 +1,23 @@
+{
+  "search_parameters": [
+    {
+      "target_path": "agents[0].attributes.trust",
+      "lower": 0.0,
+      "upper": 1.0
+    },
+    {
+      "target_path": "termination.value",
+      "lower": 1,
+      "upper": 20
+    }
+  ],
+  "objective": {
+    "metric_name": "derived:abm:Person:contributions:sum",
+    "direction": "maximize"
+  },
+  "candidate_count": 12,
+  "replications": 2,
+  "search_seed": 20261115,
+  "include_baseline": true,
+  "constraints": []
+}
