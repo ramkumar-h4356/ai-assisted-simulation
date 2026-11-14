@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "analysis_name": "M25 experiment results review",
+  "sources": [
+    {
+      "source_id": "m10_grid",
+      "report_type": "m10",
+      "path": "outputs/model_m10_analysis.json"
+    },
+    {
+      "source_id": "m11_uncertainty",
+      "report_type": "m11",
+      "path": "outputs/model_m11_uncertainty.json"
+    },
+    {
+      "source_id": "m23_optimization",
+      "report_type": "m23",
+      "path": "outputs/model_m23_optimization.json"
+    },
+    {
+      "source_id": "m24_suite",
+      "report_type": "m24",
+      "path": "outputs/model_m24_suite.json"
+    }
+  ],
+  "metrics": [
+    {
+      "metric_name": "average_waiting_time",
+      "unit": "time units",
+      "semantic_definition": "Mean time an entity spends waiting before service begins.",
+      "direction": "minimize"
+    },
+    {
+      "metric_name": "resource_utilization",
+      "unit": "fraction",
+      "semantic_definition": "Proportion of the observed simulation horizon that a resource is occupied.",
+      "direction": "maximize"
+    },
+    {
+      "metric_name": "optimization_score",
+      "unit": null,
+      "semantic_definition": "Unitless scalar objective emitted by the optimization model.",
+      "direction": "observe"
+    }
+  ],
+  "alpha": 0.05,
+  "confidence_level": 0.95,
+  "minimum_sample_size": 5,
+  "max_pairwise_comparisons": 200
+}

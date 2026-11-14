@@ -284,3 +284,9 @@ fingerprint-verified M24 report. M24 orchestrates M9 executions; it does not
 merge different model equations, infer metric equivalence, alter artifacts,
 or replace M10 grid experiments, M11 uncertainty analysis or M23
 optimization. DES suite members require the SimPy runtime dependency.
+
+## M25 advanced experiment analytics and results intelligence
+
+M25 reads existing integrity-verified M10 parameter-sweep, M11 uncertainty, M23 optimization and M24 cross-engine suite reports. It does not rerun simulations. Choose option 22 to run an analytics plan and option 23 to inspect a saved M25 report; the standalone CLI is `python -m analytics.cli`. The plan requires exact metric names and units plus a user-authored semantic definition. It produces Student-t confidence intervals for group means, Welch independent-group comparisons, Hedges' g effect sizes, Holm-Bonferroni adjusted p-values, data-quality findings and a Pareto frontier when at least two directed objectives are available.
+
+M25 works from aggregate report statistics, not raw observations. Welch testing assumes independent observations and approximately normal sampling distributions; those assumptions cannot be checked from aggregate summaries. It skips cross-source groups that share an M9 experiment ID to avoid obvious double counting. Cross-model or cross-project comparisons still rely on the user's semantic-definition assertion; statistical differences in simulated outputs are not causal effects, real-world probabilities or proof of theory validity. For M23 objective reports, M23 does not store an objective unit, so declare the corresponding M25 metric `unit` as `null`. See `analytics/README.md`, `M25_ARCHITECTURE.md`, `M25_TEST_REPORT.md` and `scenarios/analytics/plan_template.json`.

@@ -1388,6 +1388,117 @@ def inspect_experiment_suite_report():
         print(f"\nM24 note: {warning}")
     print(f"\nReport integrity verified: {report_path}")
 
+
+def run_results_analytics_workflow():
+    """Analyze saved M10/M11/M23/M24 reports with the M25 analytics engine."""
+    from pathlib import Path
+    from analytics import analyze_reports, export_summary_csv, load_plan, save_report
+
+    root = Path(__file__).resolve().parent
+    plan_candidates = sorted((root / "scenarios" / "analytics").glob("*.json"))
+    print("\n--- M25: Advanced Experiment Analytics and Results Intelligence ---")
+    if plan_candidates:
+        print("Available analytics plans:")
+        for index, candidate in enumerate(plan_candidates[:10], start=1):
+            print(f"  {index}. {candidate.relative_to(root)}")
+    selection = input("\nPlan number or JSON path: ").strip().strip('"')
+    if not selection:
+        print("No analytics plan selected.")
+        return
+    if selection.isdigit() and plan_candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(plan_candidates)):
+            print("Invalid plan number.")
+            return
+        plan_path = plan_candidates[index - 1]
+    else:
+        plan_path = Path(selection).expanduser()
+        if not plan_path.is_absolute():
+            plan_path = (Path.cwd() / plan_path).resolve()
+    try:
+        plan = load_plan(plan_path)
+    except Exception as error:
+        print(f"Could not load M25 analytics plan: {error}")
+        return
+
+    print(f"\nAnalysis: {plan.analysis_name}")
+    print(f"Sources: {len(plan.sources)} | metrics: {len(plan.metrics)} | alpha: {plan.alpha:g}")
+    for source in plan.sources:
+        print(f"  {source.source_id}: {source.report_type.upper()} -> {source.path}")
+    source_root_text = input(f"Source report root [{root}]: ").strip().strip('"')
+    source_root = Path(source_root_text).expanduser() if source_root_text else root
+    if not source_root.is_absolute():
+        source_root = (Path.cwd() / source_root).resolve()
+    try:
+        report = analyze_reports(plan, source_root=source_root)
+        output_dir = root / "outputs" / "analytics"
+        report_path = save_report(report, output_dir / f"{report.analysis_id}_report.json")
+        csv_path = export_summary_csv(report, output_dir / f"{report.analysis_id}_summary.csv")
+    except Exception as error:
+        print(f"M25 analytics failed: {type(error).__name__}: {error}")
+        return
+
+    print(f"\n--- M25 Results ---")
+    print(f"Verified sources: {len(report.sources)} | metric groups: {len(report.groups)}")
+    print(f"Pairwise comparisons: {len(report.comparisons)} | Pareto entries: {len(report.pareto_frontier)}")
+    for item in report.insights:
+        print(f"  [{item.severity.upper()}] {item.message}")
+    for warning in report.warnings:
+        print(f"\nM25 note: {warning}")
+    print(f"\nM25 report: {report_path}")
+    print(f"M25 CSV: {csv_path}")
+
+
+def inspect_results_analytics_report():
+    """Inspect an integrity-verified M25 analytics report."""
+    from pathlib import Path
+    from analytics import load_report
+
+    output_dir = Path(__file__).resolve().parent / "outputs" / "analytics"
+    candidates = sorted(output_dir.glob("m25-*_report.json"), key=lambda item: item.stat().st_mtime, reverse=True) if output_dir.exists() else []
+    print("\n--- Inspect M25 Results Analytics Report ---")
+    if candidates:
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nReport number or M25 JSON path: ").strip().strip('"')
+    if not selection:
+        print("No M25 report selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid report number.")
+            return
+        report_path = candidates[index - 1]
+    else:
+        report_path = Path(selection).expanduser()
+        if not report_path.is_absolute():
+            report_path = (Path.cwd() / report_path).resolve()
+    try:
+        report = load_report(report_path)
+    except Exception as error:
+        print(f"Could not load or verify M25 report: {error}")
+        return
+    print(f"\nAnalysis: {report.plan.analysis_name}")
+    print(f"Sources: {len(report.sources)} | metric groups: {len(report.groups)} | comparisons: {len(report.comparisons)}")
+    for group in report.groups:
+        interval = "not estimable" if group.confidence_lower is None else f"[{group.confidence_lower:.6g}, {group.confidence_upper:.6g}]"
+        print(f"  {group.group_label} / {group.metric_name}: mean={group.mean:.6g} {group.unit or ''}; n={group.sample_size}; {report.plan.confidence_level:.1%} CI={interval}")
+    if report.comparisons:
+        print("\nWelch pairwise comparisons (group B minus group A):")
+        for item in report.comparisons:
+            print(f"  {item.group_b} - {item.group_a}: difference={item.mean_difference_b_minus_a:.6g}; Holm p={item.holm_adjusted_p_value:.4g}; Hedges g={item.hedges_g}")
+    if report.pareto_frontier:
+        print("\nPareto frontier:")
+        for item in report.pareto_frontier:
+            print(f"  {item.group_label}: {'non-dominated' if item.pareto_optimal else 'dominated'}")
+    for item in report.insights:
+        print(f"\n[{item.severity.upper()}] {item.message}")
+    for warning in report.warnings:
+        print(f"\nM25 note: {warning}")
+    print(f"\nReport integrity verified: {report_path}")
+
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
@@ -1412,8 +1523,10 @@ def main():
     print("19. Inspect a saved M23 optimization report")
     print("20. Run a cross-engine experiment suite (M24)")
     print("21. Inspect a saved M24 experiment suite report")
+    print("22. Analyze saved M10/M11/M23/M24 reports (M25)")
+    print("23. Inspect a saved M25 results analytics report")
 
-    choice = input("\nChoose an option (1-21): ").strip()
+    choice = input("\nChoose an option (1-23): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -1458,8 +1571,12 @@ def main():
         run_experiment_suite_workflow()
     elif choice == "21":
         inspect_experiment_suite_report()
+    elif choice == "22":
+        run_results_analytics_workflow()
+    elif choice == "23":
+        inspect_results_analytics_report()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 21.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 23.")
 
 
 

@@ -446,3 +446,25 @@ M24_ARCHITECTURE.md Architecture, workflow and metric comparability boundaries
 MILESTONE24_REPORT.md M24 implementation summary and V1 limitations
 M24_TEST_REPORT.md  Focused/regression test report and verification boundary
 M24_APPLY_STEPS.txt Instructions to apply and verify M24
+
+Milestone 25 additions:
+analytics/
+  models.py       Validated report-source, metric semantics, group-statistic, Welch comparison, Pareto and insight contracts
+  sources.py      Strict M10/M11/M23/M24 report loading, fingerprint verification and provenance-preserving adapters
+  statistics.py   Student-t intervals, Welch tests, Hedges' g and Holm-Bonferroni adjustment (standard library only)
+  analysis.py     Source aggregation, pairwise inference, diagnostics, result findings and Pareto frontier
+  serialization.py Strict plan/report JSON, SHA-256 fingerprints, atomic writes and CSV export
+  cli.py          Non-interactive M25 analytics runner and report inspector
+  README.md       Plan format, supported inputs, statistical assumptions and limitations
+tests/analytics/
+  test_statistics.py  Student-t quantile, confidence interval, Welch, effect-size and Holm tests
+  test_models_and_analysis.py M10 adapter, fingerprint/CSV round trip, path-safety and duplicate-source tests
+  test_source_adapters.py M11, M23 and M24 adapter integration tests
+  test_pareto.py   Multi-objective Pareto dominance checks
+scenarios/analytics/
+  plan_template.json  Four-report-type template; source paths, metric names and units must be adapted to existing reports
+main.py             M25 option 22 analytics and option 23 report inspection
+M25_ARCHITECTURE.md Statistical methods, adapters, source provenance and interpretation boundaries
+MILESTONE25_REPORT.md M25 implementation summary and scope
+M25_TEST_REPORT.md  Focused, regression and environment verification results
+M25_APPLY_STEPS.txt Windows update and verification commands

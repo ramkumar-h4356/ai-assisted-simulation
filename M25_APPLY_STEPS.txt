@@ -1,0 +1,41 @@
+M25 — Advanced Experiment Analytics and Results Intelligence
+
+1. Save M25_Updates.zip in:
+   D:\Project Simulator\milestones
+
+2. In PowerShell:
+   cd "D:\Project Simulator\simulator_real_reorganized"
+   $source = "D:\Project Simulator\milestones\M25_Updates.zip"
+   Test-Path $source
+
+3. If Test-Path returns True, extract:
+   Expand-Archive -LiteralPath $source -DestinationPath . -Force
+
+4. Run the M25 tests:
+   python -m pytest -q tests/analytics
+
+5. Run M10/M11/M23/M24 and workbench/API regression tests:
+   python -m pytest -q tests/experimentation tests/uncertainty tests/optimization tests/orchestration tests/workbench tests/webapp
+
+6. Verify M19 replay compatibility:
+   python -m pytest -q tests/des/test_replay.py tests/simulation_studio/test_des_replay.py
+
+7. Verify CLI and Python compilation:
+   python -m analytics.cli --help
+   python -m compileall -q main.py analytics
+
+8. Run the complete project suite:
+   python -m pytest -q
+
+9. Do not commit until the complete Windows suite passes.
+
+Plan template: scenarios/analytics/plan_template.json
+The template contains M10/M11/M23/M24 source slots. Edit every report path to a real integrity-verified report under the source root. Edit metric names and units to exact source values. M23 objective reports do not store objective units; set the matching M25 metric unit to null. The M25 semantic definition is a user assertion, not automatic equivalence verification.
+
+Standalone run example:
+   python -m analytics.cli --plan scenarios/analytics/plan_template.json --source-root . --output-dir outputs/analytics
+
+Inspect a saved report:
+   python -m analytics.cli --inspect outputs/analytics/<m25-report>.json
+
+Main menu: option 22 runs M25 analytics; option 23 inspects a saved M25 report.
