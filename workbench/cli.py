@@ -26,6 +26,7 @@ _ARTIFACT_OPTIONS = (
     (ArtifactType.UNCERTAINTY_REPORT, "M11 uncertainty report"),
     (ArtifactType.VISUALIZATION_BUNDLE, "M12 visualization bundle"),
     (ArtifactType.VISUALIZATION_HTML, "M12 standalone HTML dashboard"),
+    (ArtifactType.VALIDATION_REPORT, "M26 model verification and validation report"),
     (ArtifactType.OTHER, "Other project document / file"),
 )
 

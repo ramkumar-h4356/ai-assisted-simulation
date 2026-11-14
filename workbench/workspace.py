@@ -188,7 +188,7 @@ class ProjectWorkspace:
                     ArtifactType.IDEA_SESSION.value, ArtifactType.READINESS_REPORT.value, ArtifactType.COMPILATION_PROFILE.value,
                     ArtifactType.COMPILATION_ARTIFACT.value, ArtifactType.EXECUTION_RESULT.value,
                     ArtifactType.ANALYSIS_REPORT.value, ArtifactType.UNCERTAINTY_REPORT.value,
-                    ArtifactType.VISUALIZATION_BUNDLE.value,
+                    ArtifactType.VISUALIZATION_BUNDLE.value, ArtifactType.VALIDATION_REPORT.value,
                 }
                 has_downstream = any(item.artifact_type in downstream for item in manifest.artifacts)
                 if not replace_primary or has_downstream:
@@ -201,7 +201,7 @@ class ProjectWorkspace:
             ArtifactType.IDEA_SESSION, ArtifactType.READINESS_REPORT,
             ArtifactType.COMPILATION_PROFILE, ArtifactType.COMPILATION_ARTIFACT,
             ArtifactType.EXECUTION_RESULT, ArtifactType.ANALYSIS_REPORT,
-            ArtifactType.UNCERTAINTY_REPORT, ArtifactType.VISUALIZATION_BUNDLE,
+            ArtifactType.UNCERTAINTY_REPORT, ArtifactType.VISUALIZATION_BUNDLE, ArtifactType.VALIDATION_REPORT,
         }
         if artifact_type in project_scoped:
             if not current_project_id:
@@ -272,6 +272,24 @@ class ProjectWorkspace:
             )
             if not matching:
                 raise WorkspaceConflictError("M12 dashboard bundle has no exact matching M9 result and M8 artifact in this workspace")
+
+        if artifact_type is ArtifactType.VALIDATION_REPORT:
+            matching_compilation = any(
+                item.artifact_type == ArtifactType.COMPILATION_ARTIFACT.value
+                and item.metadata.get("artifact_id") == metadata.get("artifact_id")
+                and item.metadata.get("artifact_fingerprint") == metadata.get("artifact_fingerprint")
+                for item in existing
+            )
+            matching_execution = any(
+                item.artifact_type == ArtifactType.EXECUTION_RESULT.value
+                and item.metadata.get("experiment_id") == metadata.get("experiment_id")
+                and item.metadata.get("result_fingerprint") == metadata.get("result_fingerprint")
+                and item.metadata.get("artifact_id") == metadata.get("artifact_id")
+                and item.metadata.get("artifact_fingerprint") == metadata.get("artifact_fingerprint")
+                for item in existing
+            )
+            if not matching_compilation or not matching_execution:
+                raise WorkspaceConflictError("M26 validation report requires its exact M8 artifact and M9 execution result in this workspace")
         return current_project_id
 
     def add_artifact(
@@ -426,6 +444,7 @@ class ProjectWorkspace:
             WorkflowStage("execution", "Simulation execution", status(len(execution_records), compilation), len(execution_records), "M9 reproducible execution records linked to exact M8 artifacts."),
             WorkflowStage("experimentation", "Comparative experimentation", status(len(grouped.get(ArtifactType.ANALYSIS_REPORT.value, [])), execution), len(grouped.get(ArtifactType.ANALYSIS_REPORT.value, [])), "M10 comparison, descriptive analysis and parameter-sweep reports."),
             WorkflowStage("uncertainty", "Uncertainty and robustness", status(len(grouped.get(ArtifactType.UNCERTAINTY_REPORT.value, [])), execution), len(grouped.get(ArtifactType.UNCERTAINTY_REPORT.value, [])), "M11 uncertainty distributions, sensitivity screening and robustness reports."),
+            WorkflowStage("verification_validation", "Model verification and validation", status(len(grouped.get(ArtifactType.VALIDATION_REPORT.value, [])), execution), len(grouped.get(ArtifactType.VALIDATION_REPORT.value, [])), "M26 integrity, structural, trace, invariant and repeatability checks linked to exact M8/M9 evidence."),
             WorkflowStage("visualization", "Visualization", status(len(grouped.get(ArtifactType.VISUALIZATION_BUNDLE.value, [])), execution), len(grouped.get(ArtifactType.VISUALIZATION_BUNDLE.value, [])), "M12 provenance-checked visualization bundle and standalone dashboard."),
         ]
 

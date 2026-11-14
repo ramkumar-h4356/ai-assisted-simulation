@@ -21,6 +21,7 @@ class ArtifactType(str, Enum):
     UNCERTAINTY_REPORT = "uncertainty_report"
     VISUALIZATION_BUNDLE = "visualization_bundle"
     VISUALIZATION_HTML = "visualization_html"
+    VALIDATION_REPORT = "validation_report"
     OTHER = "other"
 
 

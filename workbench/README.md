@@ -74,3 +74,5 @@ M7 readiness assessment is not a truth test. It determines whether the model is 
 Local workspace data is saved under `<project-root>/workspaces/`, which is Git-ignored. It is not included in a source-code ZIP unless the user explicitly exports the workspace separately. Workspace exports can contain sensitive ideas or proprietary data.
 
 M13 is a local CLI/service workbench. It does not include the full web application, live spatial 2D renderer, ML rule-discovery model or M12 data-driven visualization adapter. M8 compilation profiles are explicit inputs; the workbench does not invent missing operational rules.
+
+M26 adds a `validation_report` artifact type. The workspace validates its M26 report fingerprint and requires exact matching M8 compilation and M9 execution artifact/fingerprint pairs before import. A dedicated workflow stage records completion of model verification and validation.

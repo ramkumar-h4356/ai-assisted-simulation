@@ -144,6 +144,19 @@ def _visualization_html(path: Path) -> dict[str, Any]:
     return {"format": "standalone_html", "size_characters": len(content)}
 
 
+def _validation_report(path: Path) -> dict[str, Any]:
+    from validation import load_report
+    report = load_report(path)
+    return {
+        "project_id": report.project_id, "revision_id": report.revision_id,
+        "validation_id": report.validation_id, "validation_name": report.validation_name,
+        "overall_status": report.overall_status, "artifact_id": report.artifact_id,
+        "artifact_fingerprint": report.artifact_fingerprint,
+        "experiment_id": report.experiment_id, "result_fingerprint": report.result_fingerprint,
+        "report_fingerprint": report.report_fingerprint,
+    }
+
+
 _VALIDATORS: dict[ArtifactType, Callable[[Path], dict[str, Any]]] = {
     ArtifactType.IDEA_PROJECT: _idea_project,
     ArtifactType.IDEA_SESSION: _idea_session,
@@ -157,6 +170,7 @@ _VALIDATORS: dict[ArtifactType, Callable[[Path], dict[str, Any]]] = {
     ArtifactType.UNCERTAINTY_REPORT: _uncertainty_report,
     ArtifactType.VISUALIZATION_BUNDLE: _visualization_bundle,
     ArtifactType.VISUALIZATION_HTML: _visualization_html,
+    ArtifactType.VALIDATION_REPORT: _validation_report,
 }
 
 

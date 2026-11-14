@@ -1499,6 +1499,78 @@ def inspect_results_analytics_report():
     print(f"\nReport integrity verified: {report_path}")
 
 
+def run_model_validation_workflow():
+    """Run M26 model verification and validation from a declared plan."""
+    from pathlib import Path
+    from validation import load_plan, save_report, export_check_csv, validate_model
+
+    print("\n--- M26: Simulation Model Verification and Validation ---")
+    plan_text = input("Path to M26 validation plan JSON [scenarios/validation/plan_template.json]: ").strip().strip('"')
+    plan_path = Path(plan_text or "scenarios/validation/plan_template.json").expanduser()
+    if not plan_path.is_absolute():
+        plan_path = (Path.cwd() / plan_path).resolve()
+    try:
+        plan = load_plan(plan_path)
+        report = validate_model(plan, artifact_root=Path.cwd(), output_dir=Path.cwd() / "outputs" / "validation")
+    except Exception as error:
+        print(f"M26 validation failed: {type(error).__name__}: {error}")
+        return
+
+    output_dir = Path.cwd() / "outputs" / "validation"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / f"{report.validation_id}_report.json"
+    csv_path = output_dir / f"{report.validation_id}_checks.csv"
+    save_report(report, report_path)
+    export_check_csv(report, csv_path)
+    counts = {status: sum(item.status == status for item in report.checks) for status in ("passed", "failed", "warning", "skipped")}
+    print(f"\nValidation status: {report.overall_status}")
+    print(f"Paradigm: {report.paradigm} | M8 artifact: {report.artifact_id}")
+    print(f"Checks: {counts}")
+    for item in report.checks:
+        if item.status in {"failed", "warning"}:
+            print(f"  [{item.status.upper()}] {item.check_id}: {item.message}")
+    for note in report.interpretation_limits:
+        print(f"\nInterpretation limit: {note}")
+    print(f"\nM26 report: {report_path}")
+    print(f"M26 checks CSV: {csv_path}")
+
+
+def inspect_model_validation_report():
+    """Inspect a fingerprint-verified M26 report."""
+    from pathlib import Path
+    from validation import load_report
+
+    output_dir = Path.cwd() / "outputs" / "validation"
+    candidates = sorted(output_dir.glob("*_report.json"), key=lambda item: item.stat().st_mtime, reverse=True) if output_dir.exists() else []
+    print("\n--- Inspect M26 Validation Report ---")
+    for index, candidate in enumerate(candidates[:10], start=1):
+        print(f"  {index}. {candidate}")
+    selection = input("\nReport number or M26 JSON path: ").strip().strip('"')
+    if not selection:
+        print("No M26 report selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid report number.")
+            return
+        report_path = candidates[index - 1]
+    else:
+        report_path = Path(selection).expanduser()
+        if not report_path.is_absolute():
+            report_path = (Path.cwd() / report_path).resolve()
+    try:
+        report = load_report(report_path)
+    except Exception as error:
+        print(f"Could not load or verify M26 report: {error}")
+        return
+    print(f"\nValidation: {report.validation_name} | status: {report.overall_status}")
+    print(f"Paradigm: {report.paradigm} | M8: {report.artifact_id} | M9: {report.experiment_id}")
+    for item in report.checks:
+        print(f"  [{item.status.upper():7}] {item.check_id}: {item.message}")
+    print(f"\nReport integrity verified: {report_path}")
+
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
@@ -1525,8 +1597,10 @@ def main():
     print("21. Inspect a saved M24 experiment suite report")
     print("22. Analyze saved M10/M11/M23/M24 reports (M25)")
     print("23. Inspect a saved M25 results analytics report")
+    print("24. Run M26 simulation model verification and validation")
+    print("25. Inspect a saved M26 validation report")
 
-    choice = input("\nChoose an option (1-23): ").strip()
+    choice = input("\nChoose an option (1-25): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -1575,8 +1649,12 @@ def main():
         run_results_analytics_workflow()
     elif choice == "23":
         inspect_results_analytics_report()
+    elif choice == "24":
+        run_model_validation_workflow()
+    elif choice == "25":
+        inspect_model_validation_report()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 23.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 25.")
 
 
 

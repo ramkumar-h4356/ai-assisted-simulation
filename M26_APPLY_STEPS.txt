@@ -1,0 +1,27 @@
+M26 — Apply Instructions
+
+Update ZIP destination:
+D:\Project Simulator\milestones\M26_Updates.zip
+
+Project repository:
+D:\Project Simulator\simulator_real_reorganized
+
+PowerShell:
+cd "D:\Project Simulator\simulator_real_reorganized"
+$source = "D:\Project Simulator\milestones\M26_Updates.zip"
+Test-Path $source
+Expand-Archive -LiteralPath $source -DestinationPath . -Force
+
+Focused checks:
+python -m pytest -q tests/validation
+python -m pytest -q tests/workbench tests/webapp
+python -m compileall -q main.py validation workbench
+python -m validation.cli --help
+
+After producing an M8 system-dynamics artifact, edit the `artifact_path` placeholder in scenarios/validation/plan_template.json to the exact relative path (the main-menu M8 workflow normally writes it directly under outputs/). Then run:
+python -m validation.cli --plan scenarios/validation/plan_template.json --artifact-root . --output-dir outputs/validation
+
+Full regression:
+python -m pytest -q
+
+Do not commit until the Windows test output is reviewed. M26 makes no new third-party dependency requirement.

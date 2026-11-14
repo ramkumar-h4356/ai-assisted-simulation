@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "validation_name": "SIR population conservation",
+  "artifact_path": "outputs/REPLACE_WITH_SIR_M8_ARTIFACT.json",
+  "execution_result_path": null,
+  "execute_if_missing": true,
+  "execution_runs": 1,
+  "execution_base_seed": null,
+  "repeatability_check": true,
+  "repeatability_tolerance": 1e-12,
+  "invariants": [
+    {
+      "check_id": "population-conserved",
+      "check_type": "conserved_sum",
+      "trace_path": "time_series[].stocks",
+      "fields": ["susceptible", "infected", "recovered"],
+      "expected_value": 1000.0,
+      "minimum": null,
+      "maximum": null,
+      "direction": "increasing",
+      "tolerance": 1e-7
+    },
+    {
+      "check_id": "stocks-nonnegative",
+      "check_type": "non_negative",
+      "trace_path": "time_series[].stocks.susceptible",
+      "fields": [],
+      "expected_value": null,
+      "minimum": null,
+      "maximum": null,
+      "direction": "increasing",
+      "tolerance": 1e-8
+    }
+  ]
+}

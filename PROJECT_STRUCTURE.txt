@@ -468,3 +468,22 @@ M25_ARCHITECTURE.md Statistical methods, adapters, source provenance and interpr
 MILESTONE25_REPORT.md M25 implementation summary and scope
 M25_TEST_REPORT.md  Focused, regression and environment verification results
 M25_APPLY_STEPS.txt Windows update and verification commands
+
+Milestone 26 additions:
+validation/
+  __init__.py        Public M26 validation API
+  models.py          Validation plans, declarative invariants, checks and reports
+  engine.py          M8 integrity/native-schema, M9 trace, initial-state,
+                     time-grid, invariant and repeatability verification
+  serialization.py   Strict M26 plan/report JSON and checks CSV persistence
+  cli.py             Standalone run/inspect CLI
+  README.md          M26 scope, usage and interpretation limits
+scenarios/validation/
+  plan_template.json Example SIR stock-conservation validation plan
+tests/validation/
+  test_models_and_invariants.py       Plan safety and invariant operators
+  test_engine_and_serialization.py    M8/M9 integration, trace checks and lineage
+  test_des_validation.py              DES verification (runs when SimPy is installed)
+
+M26 also adds a Validation Report artifact type to the M13 workspace, with exact
+M8 artifact and M9 result lineage checks, and adds options 24/25 to main.py.
