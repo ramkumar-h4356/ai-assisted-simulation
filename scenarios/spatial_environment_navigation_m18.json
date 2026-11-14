@@ -1,0 +1,104 @@
+{
+  "name": "M18 park navigation with environmental features",
+  "space": {
+    "width": 12,
+    "height": 10,
+    "boundary": "clamp",
+    "agent_collisions": true,
+    "collision_resolution": "block",
+    "grid": {
+      "cell_size": 1
+    },
+    "obstacles": [],
+    "regions": [
+      {
+        "id": "park",
+        "polygon": [
+          {"x": 0, "y": 0},
+          {"x": 12, "y": 0},
+          {"x": 12, "y": 10},
+          {"x": 0, "y": 10}
+        ],
+        "attributes": {"access": "public"},
+        "tags": ["green-space", "public"]
+      }
+    ],
+    "zones": [
+      {
+        "id": "lake",
+        "polygon": [
+          {"x": 5, "y": 0},
+          {"x": 7, "y": 0},
+          {"x": 7, "y": 7},
+          {"x": 5, "y": 7}
+        ],
+        "passable": false,
+        "navigation_cost": 1,
+        "tags": ["water", "restricted"]
+      },
+      {
+        "id": "rough-ground",
+        "polygon": [
+          {"x": 8, "y": 7},
+          {"x": 10, "y": 7},
+          {"x": 10, "y": 9},
+          {"x": 8, "y": 9}
+        ],
+        "passable": true,
+        "navigation_cost": 2.5,
+        "tags": ["rough-terrain"]
+      }
+    ],
+    "objects": [
+      {
+        "id": "oak-tree",
+        "position": {"x": 3, "y": 5},
+        "radius": 0.5,
+        "blocks_movement": true,
+        "attributes": {"species": "oak"},
+        "tags": ["tree", "vegetation"]
+      },
+      {
+        "id": "park-bench",
+        "position": {"x": 9, "y": 2},
+        "radius": 0,
+        "blocks_movement": false,
+        "attributes": {"seats": 3},
+        "tags": ["furniture", "rest-point"]
+      }
+    ]
+  },
+  "agents": [
+    {
+      "reference": "visitor",
+      "agent_type": "visitor",
+      "state": "navigating",
+      "attributes": {"destination": "east-gate"},
+      "position": {"x": 1, "y": 5},
+      "radius": 0.2
+    }
+  ],
+  "environment": {"attributes": {"setting": "urban-park"}},
+  "relationships": [],
+  "behaviours": [
+    {
+      "rule_id": "navigate-to-east-gate",
+      "agent_type": "visitor",
+      "condition": {"type": "agent_state_is", "state": "navigating"},
+      "actions": [
+        {
+          "type": "move_towards",
+          "x": 11,
+          "y": 5,
+          "max_distance": 4,
+          "pathfinding": "astar",
+          "grid_cell_size": 1
+        }
+      ],
+      "probability": 1.0
+    }
+  ],
+  "activation": {"mode": "sequential", "order": "declaration"},
+  "termination": {"type": "max_steps", "value": 5},
+  "random_seed": 18
+}

@@ -8,9 +8,10 @@ resulting positions in its normal step snapshots.
 from __future__ import annotations
 
 from heapq import heappop, heappush
-from math import ceil, hypot, inf, sqrt
+from math import ceil, hypot, inf, isfinite, sqrt
 from typing import Iterable, Protocol
 
+from simulations.abm.environment import navigation_cost_at, segment_intersects_polygon
 from simulations.abm.model import (
     CircleObstacle,
     Position,
@@ -124,6 +125,29 @@ def _obstacle_blocks_segment(
     return _point_segment_distance_squared(center, start, end) < (combined_radius - _EPSILON) ** 2
 
 
+def _translated_polygon(polygon: tuple[Position, ...], dx: float, dy: float) -> tuple[Position, ...]:
+    return tuple(Position(point.x + dx, point.y + dy) for point in polygon)
+
+
+def _segment_near_polygon(
+    start: Position, end: Position, polygon: tuple[Position, ...], radius: float
+) -> bool:
+    if segment_intersects_polygon(start, end, polygon):
+        return True
+    if radius <= 0:
+        return False
+    radius_squared = radius * radius
+    for left, right in zip(polygon, polygon[1:] + polygon[:1]):
+        if (
+            _point_segment_distance_squared(left, start, end) <= radius_squared + _EPSILON
+            or _point_segment_distance_squared(right, start, end) <= radius_squared + _EPSILON
+            or _point_segment_distance_squared(start, left, right) <= radius_squared + _EPSILON
+            or _point_segment_distance_squared(end, left, right) <= radius_squared + _EPSILON
+        ):
+            return True
+    return False
+
+
 def path_is_clear(
     space: SpatialSpace,
     start: Position,
@@ -142,6 +166,23 @@ def path_is_clear(
         for dx, dy in _translations(space, start, end, margin):
             if _obstacle_blocks_segment(obstacle, start, end, radius, dx, dy):
                 return False, f"obstacle:{obstacle.identifier}"
+
+    for item in space.objects:
+        if not item.blocks_movement:
+            continue
+        combined_radius = radius + item.radius
+        for dx, dy in _translations(space, start, end, combined_radius):
+            center = Position(item.position.x + dx, item.position.y + dy)
+            if _point_segment_distance_squared(center, start, end) < (combined_radius - _EPSILON) ** 2:
+                return False, f"object:{item.identifier}"
+
+    for zone in space.zones:
+        if zone.passable:
+            continue
+        for dx, dy in _translations(space, start, end, radius):
+            polygon = _translated_polygon(zone.polygon, dx, dy)
+            if _segment_near_polygon(start, end, polygon, radius):
+                return False, f"zone:{zone.identifier}"
 
     if space.agent_collisions:
         for other in other_agents:
@@ -268,7 +309,10 @@ def astar_path(
                     continue
             if not path_is_clear(space, center(current), center(neighbour), radius, blockers, active_agent_id)[0]:
                 continue
-            tentative = current_cost + cost
+            terrain_cost = navigation_cost_at(space, center(neighbour))
+            if not isfinite(terrain_cost):
+                continue
+            tentative = current_cost + cost * terrain_cost
             if tentative + _EPSILON >= g_score.get(neighbour, inf):
                 continue
             came_from[neighbour] = current

@@ -1,10 +1,20 @@
 """Agent-Based Modelling support, including optional spatial semantics."""
 
+from simulations.abm.environment import (
+    SpatialIndex,
+    environment_objects_near,
+    navigation_cost_at,
+    point_in_polygon,
+    regions_at,
+    zones_at,
+)
 from simulations.abm.model import (
     AgentModel,
     BoundaryMode,
     CircleObstacle,
     CollisionResolution,
+    EnvironmentalObject,
+    GridSpec,
     MoveBy,
     MoveTo,
     MoveTowards,
@@ -12,7 +22,9 @@ from simulations.abm.model import (
     Position,
     RectangleObstacle,
     SpatialNeighbourStateCount,
+    SpatialRegion,
     SpatialSpace,
+    SpatialZone,
 )
 from simulations.abm.pipeline import run_agent_prompt
 
@@ -21,6 +33,8 @@ __all__ = [
     "BoundaryMode",
     "CircleObstacle",
     "CollisionResolution",
+    "EnvironmentalObject",
+    "GridSpec",
     "MoveBy",
     "MoveTo",
     "MoveTowards",
@@ -28,6 +42,14 @@ __all__ = [
     "Position",
     "RectangleObstacle",
     "SpatialNeighbourStateCount",
+    "SpatialRegion",
     "SpatialSpace",
+    "SpatialZone",
+    "SpatialIndex",
+    "environment_objects_near",
+    "navigation_cost_at",
+    "point_in_polygon",
+    "regions_at",
+    "zones_at",
     "run_agent_prompt",
 ]

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from math import isfinite
+from math import ceil, isfinite
 from types import MappingProxyType
 from typing import Mapping, TypeAlias
 
@@ -120,6 +120,165 @@ class CircleObstacle:
 SpatialObstacle: TypeAlias = RectangleObstacle | CircleObstacle
 
 
+def _validate_polygon(polygon: tuple[Position, ...], field_name: str) -> None:
+    if not isinstance(polygon, tuple) or len(polygon) < 3 or any(
+        not isinstance(point, Position) for point in polygon
+    ):
+        raise TypeError(f"{field_name} must be a tuple of at least three Position values")
+    for left, right in zip(polygon, polygon[1:] + polygon[:1]):
+        if abs(left.x - right.x) <= 1e-10 and abs(left.y - right.y) <= 1e-10:
+            raise ValueError(f"{field_name} cannot contain repeated adjacent vertices")
+    area_twice = sum(
+        left.x * right.y - right.x * left.y
+        for left, right in zip(polygon, polygon[1:] + polygon[:1])
+    )
+    if abs(area_twice) <= 1e-10:
+        raise ValueError(f"{field_name} must enclose a non-zero area")
+
+    def orient(a: Position, b: Position, c: Position) -> float:
+        return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+
+    def on_segment(a: Position, b: Position, point: Position) -> bool:
+        return (
+            min(a.x, b.x) - 1e-10 <= point.x <= max(a.x, b.x) + 1e-10
+            and min(a.y, b.y) - 1e-10 <= point.y <= max(a.y, b.y) + 1e-10
+        )
+
+    edges = tuple(zip(polygon, polygon[1:] + polygon[:1]))
+    for index, (a, b) in enumerate(edges):
+        for other_index, (c, d) in enumerate(edges):
+            if other_index <= index or other_index in {index + 1, (index - 1) % len(edges)}:
+                continue
+            o1, o2, o3, o4 = orient(a, b, c), orient(a, b, d), orient(c, d, a), orient(c, d, b)
+            crosses = (o1 > 1e-10 and o2 < -1e-10 or o1 < -1e-10 and o2 > 1e-10) and (
+                o3 > 1e-10 and o4 < -1e-10 or o3 < -1e-10 and o4 > 1e-10
+            )
+            touches = (
+                abs(o1) <= 1e-10 and on_segment(a, b, c)
+                or abs(o2) <= 1e-10 and on_segment(a, b, d)
+                or abs(o3) <= 1e-10 and on_segment(c, d, a)
+                or abs(o4) <= 1e-10 and on_segment(c, d, b)
+            )
+            if crosses or touches:
+                raise ValueError(f"{field_name} must be a simple polygon without self-intersections")
+
+
+@dataclass(frozen=True, slots=True)
+class GridSpec:
+    """Uniform square grid layered over a continuous spatial world."""
+
+    cell_size: float
+
+    def __post_init__(self) -> None:
+        cell_size = _finite_float(self.cell_size, "grid cell_size")
+        if cell_size <= 0:
+            raise ValueError("grid cell_size must be positive")
+        object.__setattr__(self, "cell_size", cell_size)
+
+    def columns(self, world_width: float) -> int:
+        width = _finite_float(world_width, "world width")
+        if width <= 0:
+            raise ValueError("world width must be positive")
+        return max(1, ceil(width / self.cell_size))
+
+    def rows(self, world_height: float) -> int:
+        height = _finite_float(world_height, "world height")
+        if height <= 0:
+            raise ValueError("world height must be positive")
+        return max(1, ceil(height / self.cell_size))
+
+    def cell_for(self, position: Position, world_width: float, world_height: float) -> tuple[int, int]:
+        if not isinstance(position, Position):
+            raise TypeError("position must be a Position")
+        if not (0 <= position.x <= world_width and 0 <= position.y <= world_height):
+            raise ValueError("position must lie inside the spatial world")
+        column = min(self.columns(world_width) - 1, int(position.x / self.cell_size))
+        row = min(self.rows(world_height) - 1, int(position.y / self.cell_size))
+        return column, row
+
+    def cell_bounds(
+        self, column: int, row: int, world_width: float, world_height: float
+    ) -> tuple[float, float, float, float]:
+        if isinstance(column, bool) or not isinstance(column, int) or isinstance(row, bool) or not isinstance(row, int):
+            raise TypeError("grid row and column must be integers")
+        if not (0 <= column < self.columns(world_width) and 0 <= row < self.rows(world_height)):
+            raise IndexError("grid cell is outside the spatial world")
+        left, top = column * self.cell_size, row * self.cell_size
+        return left, top, min(left + self.cell_size, world_width), min(top + self.cell_size, world_height)
+
+    def cell_center(self, column: int, row: int, world_width: float, world_height: float) -> Position:
+        left, top, right, bottom = self.cell_bounds(column, row, world_width, world_height)
+        return Position((left + right) / 2, (top + bottom) / 2)
+
+
+@dataclass(frozen=True, slots=True)
+class SpatialRegion:
+    """Named polygon area for semantic grouping and spatial queries."""
+
+    identifier: str
+    polygon: tuple[Position, ...]
+    attributes: Mapping[str, Scalar] = field(default_factory=dict)
+    tags: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _non_empty_text(self.identifier, "region identifier")
+        _validate_polygon(self.polygon, "region polygon")
+        object.__setattr__(self, "attributes", _freeze_attributes(self.attributes, "region attributes"))
+        if not isinstance(self.tags, tuple) or any(not isinstance(tag, str) or not tag.strip() for tag in self.tags):
+            raise TypeError("region tags must be a tuple of non-empty strings")
+
+
+@dataclass(frozen=True, slots=True)
+class SpatialZone:
+    """Polygon area that changes traversability or navigation cost."""
+
+    identifier: str
+    polygon: tuple[Position, ...]
+    passable: bool = True
+    navigation_cost: float = 1.0
+    tags: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _non_empty_text(self.identifier, "zone identifier")
+        _validate_polygon(self.polygon, "zone polygon")
+        if not isinstance(self.passable, bool):
+            raise TypeError("zone passable must be a boolean")
+        cost = _finite_float(self.navigation_cost, "zone navigation_cost")
+        if cost < 1.0:
+            raise ValueError("zone navigation_cost must be at least 1.0")
+        object.__setattr__(self, "navigation_cost", cost)
+        if not isinstance(self.tags, tuple) or any(not isinstance(tag, str) or not tag.strip() for tag in self.tags):
+            raise TypeError("zone tags must be a tuple of non-empty strings")
+
+
+@dataclass(frozen=True, slots=True)
+class EnvironmentalObject:
+    """Point-like world object with an optional circular collision footprint."""
+
+    identifier: str
+    position: Position
+    radius: float = 0.0
+    blocks_movement: bool = False
+    attributes: Mapping[str, Scalar] = field(default_factory=dict)
+    tags: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _non_empty_text(self.identifier, "environmental object identifier")
+        if not isinstance(self.position, Position):
+            raise TypeError("environmental object position must be a Position")
+        radius = _finite_float(self.radius, "environmental object radius")
+        if radius < 0:
+            raise ValueError("environmental object radius must be non-negative")
+        if not isinstance(self.blocks_movement, bool):
+            raise TypeError("environmental object blocks_movement must be a boolean")
+        if self.blocks_movement and radius <= 0:
+            raise ValueError("a blocking environmental object requires a positive radius")
+        object.__setattr__(self, "radius", radius)
+        object.__setattr__(self, "attributes", _freeze_attributes(self.attributes, "object attributes"))
+        if not isinstance(self.tags, tuple) or any(not isinstance(tag, str) or not tag.strip() for tag in self.tags):
+            raise TypeError("object tags must be a tuple of non-empty strings")
+
+
 @dataclass(frozen=True, slots=True)
 class SpatialSpace:
     """A 2D world measured in model-defined units.
@@ -135,6 +294,10 @@ class SpatialSpace:
     obstacles: tuple[SpatialObstacle, ...] = ()
     agent_collisions: bool = True
     collision_resolution: CollisionResolution = CollisionResolution.BLOCK
+    grid: GridSpec | None = None
+    regions: tuple[SpatialRegion, ...] = ()
+    zones: tuple[SpatialZone, ...] = ()
+    objects: tuple[EnvironmentalObject, ...] = ()
 
     def __post_init__(self) -> None:
         for name, value in (("width", self.width), ("height", self.height)):
@@ -154,6 +317,31 @@ class SpatialSpace:
             raise TypeError("agent_collisions must be a boolean")
         if not isinstance(self.collision_resolution, CollisionResolution):
             raise TypeError("collision_resolution must be a CollisionResolution")
+        if self.grid is not None and not isinstance(self.grid, GridSpec):
+            raise TypeError("grid must be a GridSpec or None")
+        for field_name, values, expected_type in (
+            ("regions", self.regions, SpatialRegion),
+            ("zones", self.zones, SpatialZone),
+            ("objects", self.objects, EnvironmentalObject),
+        ):
+            if not isinstance(values, tuple) or any(not isinstance(item, expected_type) for item in values):
+                raise TypeError(f"{field_name} must be a tuple of {expected_type.__name__} instances")
+        environment_ids = [item.identifier for group in (self.regions, self.zones, self.objects) for item in group]
+        if len(environment_ids) != len(set(environment_ids)):
+            raise ValueError("region, zone, and environmental object identifiers must be unique")
+        for region in self.regions:
+            if any(point.x < 0 or point.y < 0 or point.x > self.width or point.y > self.height for point in region.polygon):
+                raise ValueError(f"region {region.identifier!r} must lie inside the spatial world")
+        for zone in self.zones:
+            if any(point.x < 0 or point.y < 0 or point.x > self.width or point.y > self.height for point in zone.polygon):
+                raise ValueError(f"zone {zone.identifier!r} must lie inside the spatial world")
+        for item in self.objects:
+            if (
+                item.position.x - item.radius < 0 or item.position.y - item.radius < 0
+                or item.position.x + item.radius > self.width
+                or item.position.y + item.radius > self.height
+            ):
+                raise ValueError(f"environmental object {item.identifier!r} must lie inside the spatial world")
         for obstacle in self.obstacles:
             if isinstance(obstacle, RectangleObstacle):
                 if obstacle.x + obstacle.width > self.width or obstacle.y + obstacle.height > self.height:

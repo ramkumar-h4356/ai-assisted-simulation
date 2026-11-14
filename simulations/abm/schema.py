@@ -25,6 +25,8 @@ from simulations.abm.model import (
     CollisionResolution,
     ComparisonOperator,
     Environment,
+    EnvironmentalObject,
+    GridSpec,
     IncrementAttribute,
     MaxSteps,
     MoveBy,
@@ -37,7 +39,9 @@ from simulations.abm.model import (
     SetAttribute,
     SetState,
     SpatialNeighbourStateCount,
+    SpatialRegion,
     SpatialSpace,
+    SpatialZone,
 )
 
 
@@ -389,7 +393,8 @@ def agent_model_from_dict(data: dict[str, Any]) -> AgentModel:
         raw_space = _object(raw_space, "space")
         _check_keys(
             raw_space,
-            {"width", "height", "boundary", "obstacles", "agent_collisions", "collision_resolution"},
+            {"width", "height", "boundary", "obstacles", "agent_collisions", "collision_resolution",
+             "grid", "regions", "zones", "objects"},
             "space",
         )
         if "width" not in raw_space or "height" not in raw_space:
@@ -423,9 +428,109 @@ def agent_model_from_dict(data: dict[str, Any]) -> AgentModel:
             agent_collisions = raw_space.get("agent_collisions", True)
             if not isinstance(agent_collisions, bool):
                 raise ABMModelDataError("space.agent_collisions", "agent_collisions must be true or false.")
+
+            grid = None
+            if raw_space.get("grid") is not None:
+                raw_grid = _object(raw_space["grid"], "space.grid")
+                _check_keys(raw_grid, {"cell_size"}, "space.grid")
+                if "cell_size" not in raw_grid:
+                    raise ABMModelDataError("space.grid.cell_size", "A grid cell_size is required.")
+                try:
+                    grid = GridSpec(raw_grid["cell_size"])
+                except (TypeError, ValueError) as error:
+                    raise ABMModelDataError("space.grid", str(error)) from error
+
+            def parse_polygon(raw_polygon: Any, polygon_path: str) -> tuple[Position, ...]:
+                points = _array(raw_polygon, polygon_path)
+                parsed: list[Position] = []
+                for point_index, raw_point in enumerate(points):
+                    point_path = f"{polygon_path}[{point_index}]"
+                    point_data = _object(raw_point, point_path)
+                    _check_keys(point_data, {"x", "y"}, point_path)
+                    if "x" not in point_data or "y" not in point_data:
+                        raise ABMModelDataError(point_path, "Both x and y coordinates are required.")
+                    try:
+                        parsed.append(Position(point_data["x"], point_data["y"]))
+                    except (TypeError, ValueError) as error:
+                        raise ABMModelDataError(point_path, str(error)) from error
+                return tuple(parsed)
+
+            def parse_tags(raw_tags: Any, tags_path: str) -> tuple[str, ...]:
+                if raw_tags is None:
+                    return ()
+                tags = _array(raw_tags, tags_path)
+                if any(not isinstance(tag, str) or not tag.strip() for tag in tags):
+                    raise ABMModelDataError(tags_path, "Tags must be non-empty strings.")
+                return tuple(tag.strip() for tag in tags)
+
+            regions: list[SpatialRegion] = []
+            for region_index, raw_region in enumerate(_array(raw_space.get("regions", []), "space.regions")):
+                region_path = f"space.regions[{region_index}]"
+                region_data = _object(raw_region, region_path)
+                _check_keys(region_data, {"id", "polygon", "attributes", "tags"}, region_path)
+                region_id = _required_text(region_data, "id", region_path)
+                attributes = region_data.get("attributes", {})
+                if not isinstance(attributes, dict):
+                    raise ABMModelDataError(f"{region_path}.attributes", "Attributes must be a JSON object.")
+                try:
+                    regions.append(SpatialRegion(
+                        region_id, parse_polygon(region_data.get("polygon"), f"{region_path}.polygon"),
+                        attributes, parse_tags(region_data.get("tags", []), f"{region_path}.tags"),
+                    ))
+                except (TypeError, ValueError) as error:
+                    raise ABMModelDataError(region_path, str(error)) from error
+
+            zones: list[SpatialZone] = []
+            for zone_index, raw_zone in enumerate(_array(raw_space.get("zones", []), "space.zones")):
+                zone_path = f"space.zones[{zone_index}]"
+                zone_data = _object(raw_zone, zone_path)
+                _check_keys(zone_data, {"id", "polygon", "passable", "navigation_cost", "tags"}, zone_path)
+                zone_id = _required_text(zone_data, "id", zone_path)
+                passable = zone_data.get("passable", True)
+                if not isinstance(passable, bool):
+                    raise ABMModelDataError(f"{zone_path}.passable", "Passable must be true or false.")
+                try:
+                    zones.append(SpatialZone(
+                        zone_id, parse_polygon(zone_data.get("polygon"), f"{zone_path}.polygon"),
+                        passable, zone_data.get("navigation_cost", 1.0),
+                        parse_tags(zone_data.get("tags", []), f"{zone_path}.tags"),
+                    ))
+                except (TypeError, ValueError) as error:
+                    raise ABMModelDataError(zone_path, str(error)) from error
+
+            objects: list[EnvironmentalObject] = []
+            for object_index, raw_object in enumerate(_array(raw_space.get("objects", []), "space.objects")):
+                object_path = f"space.objects[{object_index}]"
+                object_data = _object(raw_object, object_path)
+                _check_keys(object_data, {"id", "position", "radius", "blocks_movement", "attributes", "tags"}, object_path)
+                object_id = _required_text(object_data, "id", object_path)
+                raw_position = _object(object_data.get("position"), f"{object_path}.position")
+                _check_keys(raw_position, {"x", "y"}, f"{object_path}.position")
+                if "x" not in raw_position or "y" not in raw_position:
+                    raise ABMModelDataError(f"{object_path}.position", "Both x and y coordinates are required.")
+                try:
+                    object_position = Position(raw_position["x"], raw_position["y"])
+                except (TypeError, ValueError) as error:
+                    raise ABMModelDataError(f"{object_path}.position", str(error)) from error
+                attributes = object_data.get("attributes", {})
+                if not isinstance(attributes, dict):
+                    raise ABMModelDataError(f"{object_path}.attributes", "Attributes must be a JSON object.")
+                blocks_movement = object_data.get("blocks_movement", False)
+                if not isinstance(blocks_movement, bool):
+                    raise ABMModelDataError(f"{object_path}.blocks_movement", "blocks_movement must be true or false.")
+                try:
+                    objects.append(EnvironmentalObject(
+                        object_id, object_position, object_data.get("radius", 0.0),
+                        blocks_movement, attributes,
+                        parse_tags(object_data.get("tags", []), f"{object_path}.tags"),
+                    ))
+                except (TypeError, ValueError) as error:
+                    raise ABMModelDataError(object_path, str(error)) from error
+
             space = SpatialSpace(
                 raw_space["width"], raw_space["height"], boundary,
                 tuple(obstacles), agent_collisions, collision_resolution,
+                grid=grid, regions=tuple(regions), zones=tuple(zones), objects=tuple(objects),
             )
         except ABMModelDataError:
             raise

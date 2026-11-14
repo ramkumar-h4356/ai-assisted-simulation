@@ -291,3 +291,20 @@ webapp/
 M15_ARCHITECTURE.md   Replay architecture, trace semantics and spatial limitations
 MILESTONE15_REPORT.md M15 implementation summary and scope boundaries
 M15_TEST_REPORT.md   Focused and non-DES regression test results
+
+
+Milestone 18 additions:
+simulations/abm/
+  environment.py          Grid coordinate helpers, polygon queries, environment-object lookup, and deterministic spatial hash index
+  model.py                GridSpec, SpatialRegion, SpatialZone, EnvironmentalObject and extended SpatialSpace
+  spatial.py              M17 collision/path validation extended for impassable zones, blocking objects and weighted A* costs
+  schema.py               Strict M18 space.grid/regions/zones/objects parser
+  engine.py               SpatialIndex-backed live neighbourhood queries and indexed position updates
+scenarios/
+  spatial_environment_navigation_m18.json   Park navigation around a blocking tree and impassable lake
+tests/abm/
+  test_environment_m18.py  Grid, polygon, object, terrain routing, index and M18 scenario tests
+M18_ARCHITECTURE.md       Spatial environment and routing architecture
+MILESTONE18_REPORT.md     Milestone 18 delivery report
+M18_TEST_REPORT.md        M18 verification record
+M18_APPLY_STEPS.txt       Windows update and verification steps

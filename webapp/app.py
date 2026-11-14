@@ -135,8 +135,8 @@ def create_app(
     manager = WorkspaceManager(root)
     app = FastAPI(
         title="AI-Assisted Simulation Workbench",
-        version="17.0.0",
-        description="Local project workspaces, simulation lifecycle, and spatial ABM replay API.",
+        version="18.0.0",
+        description="Local project workspaces, simulation lifecycle, and spatial ABM environment/replay API.",
         docs_url=None,
         redoc_url=None,
         openapi_url="/api/openapi.json",

@@ -88,6 +88,7 @@ M9 persists coordinates in its trace. M16's 2D replay uses those recorded coordi
 
 - `scenarios/disease_transmission_abm.json` — non-spatial network example.
 - `scenarios/spatial_neighbour_movement_abm.json` — moving beacon and radius-based awareness example.
+- `scenarios/spatial_environment_navigation_m18.json` — a visitor routes around a tree and an impassable lake while traversing a weighted terrain zone.
 
 
 ## M17 advanced spatial mechanics
@@ -131,3 +132,42 @@ A spatial world can declare rectangular and circular obstacles:
 - M9 traces record requested target, actual destination, collision/path outcome, travelled distance and traversed waypoints. M15 replay carries those events forward with the exact M8/M9 lineage.
 
 Collision detection uses circular agent bodies. Rectangle collision tests use a conservative expanded axis-aligned box around the rectangle, so clearance near rectangle corners may be stricter than exact circle/rectangle geometry. Movement is sequential under the existing declaration-order activation policy. Earlier agents' committed positions block later agents in the same step. Simultaneous collision resolution, moving obstacles, polygon geometry, continuous-time physics and globally optimal continuous path planning remain out of scope.
+
+
+## M18 spatial environment
+
+M18 extends `SpatialSpace` without changing the original M16/M17 fields:
+
+```json
+{
+  "space": {
+    "width": 100, "height": 80, "boundary": "clamp",
+    "grid": {"cell_size": 2},
+    "regions": [{
+      "id": "park",
+      "polygon": [{"x": 0, "y": 0}, {"x": 40, "y": 0},
+                  {"x": 40, "y": 30}, {"x": 0, "y": 30}],
+      "attributes": {"access": "public"}, "tags": ["green-space"]
+    }],
+    "zones": [{
+      "id": "mud", "passable": true, "navigation_cost": 3,
+      "polygon": [{"x": 45, "y": 20}, {"x": 60, "y": 20},
+                  {"x": 60, "y": 40}, {"x": 45, "y": 40}]
+    }],
+    "objects": [{
+      "id": "tree", "position": {"x": 20, "y": 20},
+      "radius": 1, "blocks_movement": true, "tags": ["tree"]
+    }]
+  }
+}
+```
+
+- `GridSpec` maps world coordinates to uniform square cells; partial cells at the right/bottom edges are clipped to world dimensions.
+- `SpatialRegion` is a simple polygon with optional scalar `attributes` and tags. Polygon boundaries count as inside.
+- `SpatialZone` is a simple polygon with `passable` and `navigation_cost` fields. An impassable zone blocks direct movement and A*; costs at least `1.0` multiply when passable zones overlap.
+- `EnvironmentalObject` has a point position and optional circular footprint. When `blocks_movement` is true, a positive radius is required and its footprint participates in collision checks. Non-blocking objects remain queryable landmarks/resources.
+- Region, zone and object IDs share one uniqueness namespace within a world; all geometry must lie inside the world.
+- `SpatialIndex` offers deterministic `query_radius` and `query_bounds` methods plus `add`, `move`, and `remove`. The ABM engine uses the index for `SpatialNeighbourStateCount`, updating an agent's indexed position when its rule actions commit. Wrapped-world conditions query periodic index offsets and still verify shortest wrapped distance.
+- `space.grid.cell_size` controls the spatial hash cell size. `move_towards.grid_cell_size` remains a separate parameter for A* route resolution.
+
+Environmental regions, zones and objects are static during one simulation run. M18 does not add polygon collision obstacles (the blocking object footprint is circular), dynamic environment mutation, continuous physics, or new environment-interaction action types.

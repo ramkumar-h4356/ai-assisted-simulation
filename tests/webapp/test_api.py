@@ -25,7 +25,7 @@ def test_local_web_shell_and_workspace_crud(tmp_path):
 
     health = client.get("/api/v1/health")
     assert health.status_code == 200
-    assert health.json()["version"] == "17.0.0"
+    assert health.json()["version"] == "18.0.0"
 
     home = client.get("/")
     assert home.status_code == 200

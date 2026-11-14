@@ -1,13 +1,14 @@
-"""Deterministic and seeded-stochastic execution for ABM, including M16 spatial rules."""
+"""Deterministic and seeded-stochastic ABM execution, including M18 spatial environments."""
 
 from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from math import hypot, isfinite
+from math import hypot, isfinite, sqrt
 from types import MappingProxyType
 from typing import Mapping
 
+from simulations.abm.environment import SpatialIndex
 from simulations.abm.model import (
     Action,
     Agent,
@@ -252,6 +253,16 @@ class AgentBasedSimulationEngine:
             for agent in model.agents
         }
         neighbours = self._build_neighbour_index(model.agents, model.relationships)
+        spatial_index = None
+        if model.space is not None:
+            default_cell_size = max(1.0, sqrt(
+                model.space.width * model.space.height / max(1, len(runtime_agents))
+            ))
+            cell_size = model.space.grid.cell_size if model.space.grid is not None else default_cell_size
+            spatial_index = SpatialIndex.from_positions(
+                {identifier: agent.position for identifier, agent in runtime_agents.items() if agent.position is not None},
+                cell_size,
+            )
         rng = random.Random(model.random_seed)
 
         history: list[SimulationSnapshot] = [self._snapshot(0, runtime_agents, model.agents)]
@@ -276,6 +287,7 @@ class AgentBasedSimulationEngine:
                         step,
                         rule,
                         model.space,
+                        spatial_index,
                     )
                     if not matched:
                         evaluations.append(
@@ -297,6 +309,7 @@ class AgentBasedSimulationEngine:
                         self._apply_actions(
                             active, rule, step, model.space,
                             agents=runtime_agents, movement_events=movement_events,
+                            spatial_index=spatial_index,
                         )
 
                     evaluations.append(
@@ -376,6 +389,7 @@ class AgentBasedSimulationEngine:
         step: int,
         rule: BehaviourRule,
         space: SpatialSpace | None,
+        spatial_index: SpatialIndex | None = None,
     ) -> bool:
         if isinstance(condition, AgentStateIs):
             return active.state == condition.state
@@ -415,13 +429,29 @@ class AgentBasedSimulationEngine:
                     self._runtime_context(step, active, rule)
                     + "spatial neighbourhood condition requires a positioned agent and spatial space"
                 )
+            if spatial_index is not None:
+                candidates: dict[str, Position] = {}
+                offsets = (0.0,) if space.boundary.value != "wrap" else (-1.0, 0.0, 1.0)
+                for offset_x in offsets:
+                    for offset_y in offsets:
+                        query_center = Position(
+                            active.position.x + offset_x * space.width,
+                            active.position.y + offset_y * space.height,
+                        )
+                        candidates.update(dict(spatial_index.query_radius(query_center, condition.radius)))
+                candidate_ids = candidates
+            else:
+                candidate_ids = {
+                    identifier: other.position
+                    for identifier, other in agents.items()
+                    if other.position is not None
+                }
             matching_count = sum(
                 1
-                for other in agents.values()
-                if other.identifier != active.identifier
-                and other.position is not None
-                and other.state == condition.state
-                and space.distance(active.position, other.position) <= condition.radius
+                for identifier, position in candidate_ids.items()
+                if identifier != active.identifier
+                and agents[identifier].state == condition.state
+                and space.distance(active.position, position) <= condition.radius
             )
             return self._compare(
                 matching_count,
@@ -434,13 +464,13 @@ class AgentBasedSimulationEngine:
 
         if isinstance(condition, AllOf):
             return all(
-                self._evaluate_condition(child, active, agents, neighbours, step, rule, space)
+                self._evaluate_condition(child, active, agents, neighbours, step, rule, space, spatial_index)
                 for child in condition.conditions
             )
 
         if isinstance(condition, AnyOf):
             return any(
-                self._evaluate_condition(child, active, agents, neighbours, step, rule, space)
+                self._evaluate_condition(child, active, agents, neighbours, step, rule, space, spatial_index)
                 for child in condition.conditions
             )
 
@@ -500,6 +530,7 @@ class AgentBasedSimulationEngine:
         *,
         agents: Mapping[str, _RuntimeAgent] | None = None,
         movement_events: list[MovementEvent] | None = None,
+        spatial_index: SpatialIndex | None = None,
     ) -> None:
         # Apply to temporary values first so an invalid action cannot leave a
         # partially updated agent state, position, or movement budget.
@@ -543,6 +574,8 @@ class AgentBasedSimulationEngine:
                 + f"could not apply rule actions: {error}"
             ) from error
 
+        if spatial_index is not None and new_position is not None and new_position != active.position:
+            spatial_index.move(active.identifier, new_position)
         active.state = new_state
         active.attributes = new_attributes
         active.position = new_position

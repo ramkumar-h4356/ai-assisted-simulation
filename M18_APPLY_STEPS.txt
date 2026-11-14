@@ -1,0 +1,24 @@
+M18 APPLY STEPS
+===============
+
+1. Extract the M18 project ZIP into a new folder, or merge the M18 updates into
+   the existing simulator_real_reorganized repository while preserving local
+   workspace data and .env files.
+2. Activate the existing virtual environment.
+3. Install project dependencies only if they are not already present:
+      python -m pip install -r requirements-dev.txt
+4. Run focused ABM tests:
+      python -m pytest -q tests/abm
+5. Run the full suite:
+      python -m pytest -q
+6. Run the M18 scenario through the existing ABM runner or inspect it in the
+   current workbench/replay. The scenario is:
+      scenarios/spatial_environment_navigation_m18.json
+7. Review the changes and commit them:
+      git status
+      git diff --check
+      git add .
+      git commit -m "feat: add M18 spatial environments and terrain-aware navigation"
+
+The update keeps M17 movement-event and replay trace formats unchanged. Do not
+commit .env files, local workspaces, API keys, or virtual environments.
