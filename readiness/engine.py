@@ -24,7 +24,7 @@ _BACKENDS = {
     Paradigm.DISCRETE_EVENT: BackendStatus.IMPLEMENTED,
     Paradigm.AGENT_BASED: BackendStatus.IMPLEMENTED,
     Paradigm.MATHEMATICAL: BackendStatus.IMPLEMENTED,
-    Paradigm.DATA_DRIVEN: BackendStatus.ASSESSMENT_ONLY,
+    Paradigm.DATA_DRIVEN: BackendStatus.IMPLEMENTED,
 }
 
 _TIME_WORDS = re.compile(r"\b(time|duration|delay|arrival|departure|interval|rate|frequency|schedule|period|timestamp)\b", re.I)
@@ -284,6 +284,7 @@ def _clarifications(revision, paradigm_assessments: tuple[ParadigmAssessment, ..
                 "A mechanism needs a sufficiently precise rule before a paradigm-specific implementation can be planned.",
                 QuestionPriority.HIGH,
                 (mechanism.id,),
+                blocking=selected is not Paradigm.DATA_DRIVEN,
             )
 
     for concept in revision.concepts:
@@ -372,9 +373,21 @@ def assess_readiness(project: IdeaProject, *, selected_paradigm: Paradigm | str 
         status = ReadinessStatus.NEEDS_CLARIFICATION
         explanation = "The current revision contains no extracted concepts, so there is not yet a meaningful basis for evaluating simulation readiness."
     else:
-        has_structure = bool(revision.mechanisms or revision.relationships)
+        data_driven_structure = (
+            any(item.reference_type is ReferenceType.DATASET for item in revision.evidence_references)
+            and any(item.data_type in {PropertyType.NUMBER, PropertyType.INTEGER} for item in revision.properties)
+            and any(
+                item.data_type is PropertyType.DATE_TIME
+                or _TIME_WORDS.search(item.name + " " + item.definition)
+                for item in revision.properties
+            )
+        )
+        has_structure = bool(revision.mechanisms or revision.relationships) or data_driven_structure
         has_blocking_questions = any(item.status is QuestionStatus.OPEN and item.blocking for item in revision.open_questions)
-        has_unoperational_mechanism = any(not item.operational_definition.strip() for item in revision.mechanisms)
+        has_unoperational_mechanism = (
+            selected_paradigm is not Paradigm.DATA_DRIVEN
+            and any(not item.operational_definition.strip() for item in revision.mechanisms)
+        )
         if not has_structure or has_blocking_questions or has_unoperational_mechanism:
             status = ReadinessStatus.NEEDS_CLARIFICATION
             reasons = []
@@ -392,7 +405,11 @@ def assess_readiness(project: IdeaProject, *, selected_paradigm: Paradigm | str 
     if selected_paradigm is not None:
         chosen = next(item for item in assessments if item.paradigm is selected_paradigm)
         no_blockers = not any(item.blocking for item in clarification_items)
-        if selected_paradigm is Paradigm.MATHEMATICAL and not revision.mechanisms:
+        if selected_paradigm is Paradigm.DATA_DRIVEN:
+            # M21 fits predictive patterns from observations. It must not turn
+            # those associations into asserted causal mechanisms.
+            mechanisms_operational = True
+        elif selected_paradigm is Paradigm.MATHEMATICAL and not revision.mechanisms:
             # A mathematical model may be governed directly by an explicit
             # quantitative relationship; a prose mechanism is not mandatory.
             mechanisms_operational = any(

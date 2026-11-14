@@ -1,0 +1,318 @@
+{
+  "schema_version": 1,
+  "name": "Synthetic coupled weather indicators (demonstration)",
+  "dataset_reference_id": "dataset-ref",
+  "time_field": "time",
+  "time_unit": "days",
+  "variables": [
+    "rainfall",
+    "temperature"
+  ],
+  "observations": [
+    {
+      "time": 0.0,
+      "rainfall": 5.0,
+      "temperature": 3.0
+    },
+    {
+      "time": 1.0,
+      "rainfall": 5.34,
+      "temperature": 3.74
+    },
+    {
+      "time": 2.0,
+      "rainfall": 5.644,
+      "temperature": 4.3044
+    },
+    {
+      "time": 3.0,
+      "rainfall": 5.908032,
+      "temperature": 4.742912
+    },
+    {
+      "time": 4.0,
+      "rainfall": 6.133216,
+      "temperature": 5.08862592
+    },
+    {
+      "time": 5.0,
+      "rainfall": 6.32300559,
+      "temperature": 5.36424451
+    },
+    {
+      "time": 6.0,
+      "rainfall": 6.48170359,
+      "temperature": 5.58582727
+    },
+    {
+      "time": 7.0,
+      "rainfall": 6.61369276,
+      "temperature": 5.76506919
+    },
+    {
+      "time": 8.0,
+      "rainfall": 6.72306433,
+      "temperature": 5.91071175
+    },
+    {
+      "time": 9.0,
+      "rainfall": 6.81346325,
+      "temperature": 6.02943557
+    },
+    {
+      "time": 10.0,
+      "rainfall": 6.88804839,
+      "temperature": 6.12643957
+    },
+    {
+      "time": 11.0,
+      "rainfall": 6.94951001,
+      "temperature": 6.20582762
+    },
+    {
+      "time": 12.0,
+      "rainfall": 7.00011341,
+      "temperature": 6.27087458
+    },
+    {
+      "time": 13.0,
+      "rainfall": 7.04175162,
+      "temperature": 6.32421513
+    },
+    {
+      "time": 14.0,
+      "rainfall": 7.07599838,
+      "temperature": 6.36798158
+    },
+    {
+      "time": 15.0,
+      "rainfall": 7.10415736,
+      "temperature": 6.40390718
+    },
+    {
+      "time": 16.0,
+      "rainfall": 7.12730587,
+      "temperature": 6.43340521
+    },
+    {
+      "time": 17.0,
+      "rainfall": 7.14633265,
+      "temperature": 6.4576306
+    },
+    {
+      "time": 18.0,
+      "rainfall": 7.16196995,
+      "temperature": 6.47752868
+    },
+    {
+      "time": 19.0,
+      "rainfall": 7.17482066,
+      "temperature": 6.4938741
+    },
+    {
+      "time": 20.0,
+      "rainfall": 7.1853808,
+      "temperature": 6.5073021
+    },
+    {
+      "time": 21.0,
+      "rainfall": 7.19405835,
+      "temperature": 6.51833398
+    },
+    {
+      "time": 22.0,
+      "rainfall": 7.20118873,
+      "temperature": 6.52739761
+    },
+    {
+      "time": 23.0,
+      "rainfall": 7.20704769,
+      "temperature": 6.53484434
+    },
+    {
+      "time": 24.0,
+      "rainfall": 7.21186189,
+      "temperature": 6.54096274
+    },
+    {
+      "time": 25.0,
+      "rainfall": 7.21581758,
+      "temperature": 6.5459898
+    },
+    {
+      "time": 26.0,
+      "rainfall": 7.21906784,
+      "temperature": 6.55012023
+    },
+    {
+      "time": 27.0,
+      "rainfall": 7.22173846,
+      "temperature": 6.55351397
+    },
+    {
+      "time": 28.0,
+      "rainfall": 7.22393281,
+      "temperature": 6.55630242
+    },
+    {
+      "time": 29.0,
+      "rainfall": 7.22573582,
+      "temperature": 6.55859355
+    },
+    {
+      "time": 30.0,
+      "rainfall": 7.22721727,
+      "temperature": 6.56047606
+    },
+    {
+      "time": 31.0,
+      "rainfall": 7.22843452,
+      "temperature": 6.56202283
+    },
+    {
+      "time": 32.0,
+      "rainfall": 7.22943468,
+      "temperature": 6.56329374
+    },
+    {
+      "time": 33.0,
+      "rainfall": 7.23025647,
+      "temperature": 6.56433799
+    },
+    {
+      "time": 34.0,
+      "rainfall": 7.2309317,
+      "temperature": 6.56519599
+    },
+    {
+      "time": 35.0,
+      "rainfall": 7.2314865,
+      "temperature": 6.56590098
+    },
+    {
+      "time": 36.0,
+      "rainfall": 7.23194236,
+      "temperature": 6.56648024
+    },
+    {
+      "time": 37.0,
+      "rainfall": 7.23231692,
+      "temperature": 6.56695619
+    },
+    {
+      "time": 38.0,
+      "rainfall": 7.23262468,
+      "temperature": 6.56734725
+    },
+    {
+      "time": 39.0,
+      "rainfall": 7.23287755,
+      "temperature": 6.56766857
+    },
+    {
+      "time": 40.0,
+      "rainfall": 7.23308532,
+      "temperature": 6.56793259
+    },
+    {
+      "time": 41.0,
+      "rainfall": 7.23325604,
+      "temperature": 6.56814952
+    },
+    {
+      "time": 42.0,
+      "rainfall": 7.23339631,
+      "temperature": 6.56832776
+    },
+    {
+      "time": 43.0,
+      "rainfall": 7.23351156,
+      "temperature": 6.56847421
+    },
+    {
+      "time": 44.0,
+      "rainfall": 7.23360626,
+      "temperature": 6.56859454
+    },
+    {
+      "time": 45.0,
+      "rainfall": 7.23368407,
+      "temperature": 6.56869342
+    },
+    {
+      "time": 46.0,
+      "rainfall": 7.23374801,
+      "temperature": 6.56877466
+    },
+    {
+      "time": 47.0,
+      "rainfall": 7.23380054,
+      "temperature": 6.56884141
+    },
+    {
+      "time": 48.0,
+      "rainfall": 7.2338437,
+      "temperature": 6.56889625
+    },
+    {
+      "time": 49.0,
+      "rainfall": 7.23387916,
+      "temperature": 6.56894132
+    },
+    {
+      "time": 50.0,
+      "rainfall": 7.2339083,
+      "temperature": 6.56897835
+    },
+    {
+      "time": 51.0,
+      "rainfall": 7.23393225,
+      "temperature": 6.56900877
+    },
+    {
+      "time": 52.0,
+      "rainfall": 7.23395192,
+      "temperature": 6.56903377
+    },
+    {
+      "time": 53.0,
+      "rainfall": 7.23396808,
+      "temperature": 6.56905431
+    },
+    {
+      "time": 54.0,
+      "rainfall": 7.23398136,
+      "temperature": 6.56907118
+    },
+    {
+      "time": 55.0,
+      "rainfall": 7.23399228,
+      "temperature": 6.56908505
+    },
+    {
+      "time": 56.0,
+      "rainfall": 7.23400124,
+      "temperature": 6.56909644
+    },
+    {
+      "time": 57.0,
+      "rainfall": 7.23400861,
+      "temperature": 6.56910581
+    },
+    {
+      "time": 58.0,
+      "rainfall": 7.23401466,
+      "temperature": 6.5691135
+    },
+    {
+      "time": 59.0,
+      "rainfall": 7.23401964,
+      "temperature": 6.56911982
+    }
+  ],
+  "lag_order": 1,
+  "train_fraction": 0.75,
+  "forecast_horizon": 7,
+  "ridge": 1e-06,
+  "description": "Synthetic deterministic demonstration data only; not a real weather dataset."
+}

@@ -1,7 +1,7 @@
 # M8 — Conceptual-to-Executable Specification Compilation
 
 M8 creates a deterministic and traceable boundary between an M4 conceptual
-revision and the executable model families: DES V1, ABM V1 and Mathematical V1.
+revision and the executable model families: DES V1, ABM V1, Mathematical V1 and Data-Driven V1.
 
 ## The key design decision
 
@@ -13,14 +13,14 @@ service durations, agent update rules, or stopping conditions.
 A user-approved `CompilationProfile` supplies:
 
 1. The exact project and conceptual revision IDs it was prepared for.
-2. The selected executable paradigm (`discrete_event`, `agent_based` or `mathematical`).
+2. The selected executable paradigm (`discrete_event`, `agent_based`, `mathematical` or `data_driven`).
 3. A native target `model_data` object using the existing target schema.
 4. `ElementBinding` records that trace target-model paths to conceptual element
    IDs, or explain a user-specified experiment parameter.
 
 The compiler then checks the M7 implementation-planning gate, verifies the
 revision and all provenance references, parses the actual native model, and
-runs paradigm-specific validation. Mathematical profiles use the M20 ODE model schema and bind at least one quantitative relationship or operational mechanism to a governing equation. Only then does it produce a portable
+runs paradigm-specific validation. Mathematical profiles use the M20 ODE model schema and bind at least one quantitative relationship or operational mechanism to a governing equation. Data-driven profiles use the M21 VAR(p) model schema and must bind `dataset_reference_id` to a DATASET evidence reference in the exact conceptual revision. Selected observations are validated and embedded in the profile. Only then does it produce a portable
 `CompilationArtifact` plus a native `SimulationSpecification`.
 
 ## Profile format
@@ -72,7 +72,8 @@ silently promoted to facts in the conceptual theory.
 
 At least one binding must reference a conceptual element. DES/ABM profiles must
 also bind an operational mechanism; mathematical profiles may instead bind an
-explicit quantitative relationship to a governing equation. Unmapped
+explicit quantitative relationship to a governing equation; data-driven profiles
+must bind the exact dataset evidence reference. Unmapped
 concepts/mechanisms are reported as warnings so users can intentionally scope
 an experiment to only part of a theory without silently losing traceability.
 
@@ -93,8 +94,13 @@ attributes, static relationships, declarative conditions/actions, sequential
 activation in declaration order, and `max_steps` termination. Unsupported
 behaviour or scheduling semantics must not be smuggled into this schema.
 
-Data-driven remains M7 assessment-only; M8 refuses
-to compile them until corresponding execution backends exist.
+### Mathematical V1 and Data-Driven V1
+
+Mathematical V1 uses the M20 fixed-step ODE schema. Data-Driven V1 uses the
+M21 ridge-regularized VAR(p) schema. The latter requires regularly spaced
+numeric observations and a dataset evidence binding; it does not infer causal
+mechanisms. See `simulations/mathematical/README.md` and
+`simulations/data_driven/README.md` for their exact model contracts.
 
 ## API
 

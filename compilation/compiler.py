@@ -33,11 +33,13 @@ _BACKEND_NAMES = {
     CompilationParadigm.DISCRETE_EVENT: "DES V1 / SimPy backend",
     CompilationParadigm.AGENT_BASED: "ABM V1 backend",
     CompilationParadigm.MATHEMATICAL: "Mathematical V1 / Fixed-Step ODE backend",
+    CompilationParadigm.DATA_DRIVEN: "Data-Driven V1 / Ridge VAR(p) backend",
 }
 _SIMULATION_PARADIGMS = {
     CompilationParadigm.DISCRETE_EVENT: SimulationParadigm.DISCRETE_EVENT,
     CompilationParadigm.AGENT_BASED: SimulationParadigm.AGENT_BASED,
     CompilationParadigm.MATHEMATICAL: SimulationParadigm.MATHEMATICAL,
+    CompilationParadigm.DATA_DRIVEN: SimulationParadigm.DATA_DRIVEN,
 }
 _READINESS_PARADIGMS = {
     CompilationParadigm.DISCRETE_EVENT: Paradigm.DISCRETE_EVENT,
@@ -148,6 +150,11 @@ def _validate_bindings(project: IdeaProject, profile: CompilationProfile) -> lis
     concept_ids = _source_concept_ids(project)
     seen_mechanisms: set[str] = set()
     seen_relationships: set[str] = set()
+    dataset_reference_ids = {
+        item.id for item in project.current_revision.evidence_references
+        if item.reference_type.value == "dataset"
+    }
+    bound_dataset_references: set[str] = set()
     bound_concepts: set[str] = set()
     conceptual_binding_count = 0
 
@@ -167,15 +174,31 @@ def _validate_bindings(project: IdeaProject, profile: CompilationProfile) -> lis
                     seen_mechanisms.add(element_id)
                 if any(item.id == element_id for item in project.current_revision.relationships):
                     seen_relationships.add(element_id)
+                if element_id in dataset_reference_ids:
+                    bound_dataset_references.add(element_id)
 
     if conceptual_binding_count == 0:
         issues.append(_issue("M8_NO_CONCEPTUAL_BINDINGS", "bindings", "At least one target field must be traceably bound to a conceptual element."))
+    data_reference_value = profile.model_data.get("dataset_reference_id")
+    data_reference_bound = (
+        profile.paradigm is CompilationParadigm.DATA_DRIVEN
+        and data_reference_value in dataset_reference_ids
+        and data_reference_value in bound_dataset_references
+        and any(
+            item.target_path == "dataset_reference_id"
+            and item.source is BindingSource.CONCEPTUAL_ELEMENT
+            and data_reference_value in item.element_ids
+            for item in profile.bindings
+        )
+    )
     has_governing_binding = bool(seen_mechanisms) or (
         profile.paradigm is CompilationParadigm.MATHEMATICAL and bool(seen_relationships)
-    )
+    ) or data_reference_bound
     if not has_governing_binding:
         if profile.paradigm is CompilationParadigm.MATHEMATICAL:
             issues.append(_issue("M8_NO_GOVERNING_RELATION_BINDING", "bindings", "At least one quantitative relationship or operational mechanism must be bound to a governing equation."))
+        elif profile.paradigm is CompilationParadigm.DATA_DRIVEN:
+            issues.append(_issue("M8_DATASET_REFERENCE_NOT_BOUND", "bindings", "The model dataset_reference_id must match a DATASET evidence reference and be bound to that exact conceptual evidence ID."))
         else:
             issues.append(_issue("M8_NO_MECHANISM_BINDING", "bindings", "At least one operational mechanism must be bound to a target-model field or subtree. This prevents compiling only nouns while losing the theory's causal rules."))
     for concept in project.current_revision.concepts:
@@ -200,6 +223,10 @@ def compile_profile(project: IdeaProject, profile: CompilationProfile) -> Compil
 
     issues: list[CompilationIssue] = []
     revision = project.current_revision
+    dataset_reference_ids = {
+        item.id for item in revision.evidence_references
+        if item.reference_type.value == "dataset"
+    }
     if profile.project_id != project.id:
         issues.append(_issue("M8_PROJECT_MISMATCH", "project_id", "Compilation profile belongs to a different conceptual project."))
     if profile.revision_id != revision.id:
@@ -233,10 +260,16 @@ def compile_profile(project: IdeaProject, profile: CompilationProfile) -> Compil
                 issues.append(_issue(item.code, item.path, item.message, severity=IssueSeverity.WARNING))
             if validation.errors:
                 return CompilationResult(None, None, tuple(issues))
-        else:
+        elif profile.paradigm is CompilationParadigm.MATHEMATICAL:
             from simulations.mathematical.model import mathematical_model_from_dict
             model_data = json.loads(json.dumps(profile.model_data, ensure_ascii=False, allow_nan=False))
             native_model = mathematical_model_from_dict(model_data)
+        else:
+            from simulations.data_driven.model import data_driven_model_from_dict
+            model_data = json.loads(json.dumps(profile.model_data, ensure_ascii=False, allow_nan=False))
+            native_model = data_driven_model_from_dict(model_data)
+            if native_model.dataset_reference_id not in dataset_reference_ids:
+                raise ValueError("dataset_reference_id does not match a DATASET evidence reference in the selected revision")
     except Exception as error:
         path = getattr(error, "path", "model_data")
         issues.append(_issue("M8_TARGET_MODEL_INVALID", str(path), str(error)))
@@ -343,6 +376,24 @@ def create_profile_template(project: IdeaProject, paradigm: CompilationParadigm)
                 {"name": "variable_two", "initial_value": 1.0, "derivative": "0.0", "unit": "units"},
             ],
             "parameters": [],
+        }
+    elif paradigm is CompilationParadigm.DATA_DRIVEN:
+        dataset_ids = [
+            item.id for item in project.current_revision.evidence_references
+            if item.reference_type.value == "dataset"
+        ]
+        model_data = {
+            "schema_version": 1,
+            "name": project.title,
+            "dataset_reference_id": dataset_ids[0] if dataset_ids else "<dataset-reference-id>",
+            "time_field": "time",
+            "time_unit": "time units",
+            "variables": ["variable_one"],
+            "observations": [],
+            "lag_order": 1,
+            "train_fraction": 0.8,
+            "forecast_horizon": 5,
+            "ridge": 1e-6,
         }
     else:
         raise ValueError("No M8 profile template exists for this paradigm")

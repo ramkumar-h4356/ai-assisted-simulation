@@ -99,3 +99,41 @@ def mathematical_profile(project=None):
             ElementBinding("parameters[1].value", BindingSource.USER_PARAMETER, (), "Illustrative demand growth rate; not empirical evidence."),
         ),
     )
+
+
+def data_driven_profile(project=None, observations=None):
+    from tests.readiness.helpers import data_project
+
+    project = project or data_project()
+    if observations is None:
+        x, y = 5.0, 3.0
+        observations = []
+        for time in range(60):
+            observations.append({"time": float(time), "rainfall": x, "temperature": y})
+            x, y = 0.72 * x + 0.08 * y + 1.5, 0.18 * x + 0.68 * y + 0.8
+    return CompilationProfile(
+        profile_id="weather-data-driven-profile",
+        project_id=project.id,
+        revision_id=project.current_revision_id,
+        paradigm=CompilationParadigm.DATA_DRIVEN,
+        model_data={
+            "schema_version": 1,
+            "name": "Synthetic paired weather indicators",
+            "dataset_reference_id": "dataset-ref",
+            "time_field": "time",
+            "time_unit": "days",
+            "variables": ["rainfall", "temperature"],
+            "observations": observations,
+            "lag_order": 1,
+            "train_fraction": 0.75,
+            "forecast_horizon": 6,
+            "ridge": 1e-6,
+        },
+        bindings=(
+            ElementBinding("dataset_reference_id", BindingSource.CONCEPTUAL_ELEMENT, ("dataset-ref",), "Links the observations to the project's declared dataset evidence reference."),
+            ElementBinding("variables", BindingSource.CONCEPTUAL_ELEMENT, ("rainfall", "temperature"), "Maps the measured series to the conceptual variables."),
+            ElementBinding("time_field", BindingSource.CONCEPTUAL_ELEMENT, ("timestamp",), "Maps the dataset time index to the conceptual timestamp property."),
+            ElementBinding("forecast_horizon", BindingSource.USER_PARAMETER, (), "User-selected forecast horizon for the experiment."),
+            ElementBinding("ridge", BindingSource.USER_PARAMETER, (), "User-selected regularization control for model fitting."),
+        ),
+    )

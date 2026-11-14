@@ -27,7 +27,7 @@ M7 readiness assessment for supported paradigms
 Import an explicit M8 compilation profile
              |
              v
-M8 compile + native model validation (DES V1 / ABM V1)
+M8 compile + native model validation (DES V1 / ABM V1 / Mathematical V1 / Data-Driven V1)
              |
              v
 M9 execution
@@ -57,7 +57,7 @@ A user may also import existing M4 conceptual projects, M6 sessions, M5 knowledg
 - `workbench/serialization.py`: strict schema-versioned JSON serialization; rejects unknown and missing manifest fields.
 - `workbench/validators.py`: format-specific validation adapters for M4, M5, M6, M7, M8, M9, M10, M11 and M12 artifacts.
 - `workbench/workspace.py`: workspace creation, reopening, immutable idea copy, artifact storage, checksums, project/revision lineage checks, activity history, ZIP import/export and integrity checks.
-- `workbench/extensions.py`: explicit, trusted simulation-paradigm extension descriptor, lifecycle protocol and registry. Built-in adapters are registered for the implemented DES V1 and ABM V1 paths.
+- `workbench/extensions.py`: explicit, trusted simulation-paradigm extension descriptor, lifecycle protocol and registry. Built-in adapters are registered for DES V1, ABM V1, Mathematical V1 and Data-Driven V1.
 - `workbench/service.py`: M5/M6 project integration and project-scoped M7–M12 orchestration.
 - `workbench/cli.py`: project-centred interactive workbench, also available from the main menu.
 
@@ -110,7 +110,7 @@ An M7 assessment can complete while still concluding that a model is not executa
 
 `ExtensionDescriptor`, `SimulationParadigmExtension` and `ExtensionRegistry` define the controlled extension point. A trusted application component registers an adapter that declares a stable ID, version, paradigm, supported model-schema versions and required lifecycle capabilities (`validate`, `compile`, `execute`, `serialize_result`, `validate_result`). Duplicate extension IDs and duplicate active paradigm registrations are rejected.
 
-The current registry contains adapters for the existing DES V1 and ABM V1 M7/M8/M9 workflows. Mathematical and data-driven paradigms are not advertised as executable because their engines are not implemented. The registry is explicit: M13 does not dynamically import third-party code. Integrating a future engine requires implementing and testing its model schema, semantic validation, compiler, executor, result serializer and any needed M10–M12 adapters. A wholly new paradigm outside the currently declared M7/M8 paradigm identifiers may also require a deliberate schema/enum evolution.
+At the original M13 release, the registry contained DES V1 and ABM V1 adapters. M20 subsequently added the mathematical adapter and M21 added the data-driven adapter. The registry remains explicit: M13 does not dynamically import third-party code. Any future engine requires a model schema, semantic validation, compiler, executor, result serializer and any needed M10–M12 adapters. A wholly new paradigm outside the currently declared M7/M8 identifiers may also require deliberate schema/enum evolution.
 
 ## Operational entry points
 
@@ -118,7 +118,7 @@ The current registry contains adapters for the existing DES V1 and ABM V1 M7/M8/
 - `python -m workbench`.
 - Programmatic integration: `WorkbenchService(workspace)`.
 
-The workbench can create/open/list projects; run M6 interpretation/clarification; run M5 knowledge retrieval and explicit mapping review; import M4/M5/M6/M7/M8/M9/M10/M11/M12 files; assess M7 readiness; compile an imported M8 profile; execute the resulting DES/ABM artifact; run M10 parameter sweeps and analysis; run M11 uncertainty analysis; build M12 bundles and offline HTML dashboards; verify files; and export/import a portable ZIP.
+The workbench can create/open/list projects; run M6 interpretation/clarification; run M5 knowledge retrieval and explicit mapping review; import M4/M5/M6/M7/M8/M9/M10/M11/M12 files; assess M7 readiness; compile an imported M8 profile; execute DES/ABM/mathematical/data-driven artifacts; run M10 parameter sweeps and analysis; run M11 uncertainty analysis; build supported M12 bundles and offline HTML dashboards; verify files; and export/import a portable ZIP. M21 data-driven traces are stored in M9 results, but dedicated M12 data-driven visualization remains out of scope.
 
 M8 profiles remain explicit user-approved inputs. The workbench does not silently infer executable model details from an M6 idea or manufacture missing parameters.
 
@@ -133,4 +133,4 @@ M8 profiles remain explicit user-approved inputs. The workbench does not silentl
 
 ## Explicit M13 exclusions
 
-M13 delivers a local project workbench, not the planned full web application or a real-time spatial 2D renderer. It does not implement mathematical or data-driven simulation execution, automatic ML rule discovery, arbitrary universal simulation grammar, live third-party plugin loading or scientific proof/validation of a theory. Those remain separately scoped future capabilities.
+M13 delivers a local project workbench, not the planned full web application or a real-time spatial 2D renderer. Mathematical execution was added in M20 and data-driven execution in M21. Automatic ML rule discovery, arbitrary universal simulation grammar, live third-party plugin loading and scientific proof/validation of a theory remain future capabilities.

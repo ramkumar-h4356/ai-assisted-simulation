@@ -4,7 +4,7 @@ import pytest
 
 from conceptual import (
     Concept, ConceptKind, DefinitionStatus, OpenQuestion, Property, PropertyType,
-    QuestionStatus,
+    QuestionStatus, Mechanism, revise_idea_project,
 )
 from readiness import (
     BackendStatus, FitLevel, Paradigm, ReadinessStatus, assess_readiness,
@@ -20,7 +20,7 @@ def test_evaluates_all_four_paradigms_and_reports_backend_availability():
     assert report.assessment_for(Paradigm.DISCRETE_EVENT).backend_status is BackendStatus.IMPLEMENTED
     assert report.assessment_for(Paradigm.AGENT_BASED).backend_status is BackendStatus.IMPLEMENTED
     assert report.assessment_for(Paradigm.MATHEMATICAL).backend_status is BackendStatus.IMPLEMENTED
-    assert report.assessment_for(Paradigm.DATA_DRIVEN).backend_status is BackendStatus.ASSESSMENT_ONLY
+    assert report.assessment_for(Paradigm.DATA_DRIVEN).backend_status is BackendStatus.IMPLEMENTED
 
 
 def test_des_evaluator_recognizes_process_resource_and_operational_event_rule():
@@ -159,3 +159,26 @@ def test_selected_poor_fit_is_downgraded_to_needs_clarification():
 def test_invalid_selected_paradigm_is_rejected():
     with pytest.raises(ValueError, match="Unsupported paradigm"):
         assess_readiness(des_project(), selected_paradigm="quantum")
+
+
+def test_selected_data_driven_paradigm_can_pass_implementation_readiness_without_causal_mechanism():
+    report = assess_readiness(data_project(), selected_paradigm=Paradigm.DATA_DRIVEN)
+    assert report.status is ReadinessStatus.READY_FOR_IMPLEMENTATION_PLANNING
+    assert report.assessment_for(Paradigm.DATA_DRIVEN).backend_status is BackendStatus.IMPLEMENTED
+
+
+def test_data_driven_readiness_does_not_block_on_unoperational_causal_mechanisms():
+    project = data_project()
+    mechanism = Mechanism(
+        "unresolved-cause", "Unresolved causal process", "A possible process in the theory.",
+        ("rainfall", "temperature"), ("temperature",), "", "", "",
+        DefinitionStatus.PROPOSED,
+    )
+    project = revise_idea_project(
+        project, change_summary="Add a not-yet-operational causal hypothesis.",
+        mechanisms=(mechanism,),
+    )
+    report = assess_readiness(project, selected_paradigm=Paradigm.DATA_DRIVEN)
+    assert report.status is ReadinessStatus.READY_FOR_IMPLEMENTATION_PLANNING
+    mechanism_question = next(item for item in report.clarification_items if item.id == "m7-mechanism-unresolved-cause")
+    assert not mechanism_question.blocking

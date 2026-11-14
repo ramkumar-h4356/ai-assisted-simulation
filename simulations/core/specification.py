@@ -12,6 +12,7 @@ class SimulationParadigm(Enum):
     SYSTEM_DYNAMICS = "system_dynamics"
     CONTINUOUS = "continuous"
     MATHEMATICAL = "mathematical"
+    DATA_DRIVEN = "data_driven"
     MONTE_CARLO = "monte_carlo"
 
 @dataclass(frozen=True, slots=True)

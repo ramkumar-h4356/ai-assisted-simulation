@@ -111,3 +111,7 @@ Dedicated tests were added under `tests/abm/`. See `ABM_MILESTONE1_REPORT.md` fo
 ### User-side verification before ABM Milestone 1
 
 The user ran the reorganized application on Windows with the actual installed dependencies and reported **135 tests passed**. The user also ran the Groq-to-SimPy clinic CLI scenario successfully; the two-patient sequential-resource example completed at simulation time 12.00.
+
+## Post-migration engine additions
+
+The original statement above records the migration-era scope. M20 later added a validated mathematical ODE engine; M21 added a validated ridge-VAR(p) data-driven time-series engine. These later milestones integrate their own schemas and adapters through M7–M9 and M13.

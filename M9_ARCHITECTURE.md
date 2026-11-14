@@ -4,17 +4,19 @@
 
 M9 executes only a validated, integrity-checked M8 compilation artifact. It
 provides bounded experiment settings, seeded ABM replications, deterministic
-DES runs, structured traces, failure records and result persistence. It does
+DES, mathematical and data-driven runs, structured traces, failure records
+and result persistence. It does
 not reinterpret the theory, alter the M8 artifact, or claim that a successful
 simulation proves the theory.
 
-Supported execution targets remain limited to:
+Supported execution targets are:
 
 - DES V1 through the existing SimPy backend.
 - ABM V1 through the existing native agent-based backend.
+- Mathematical V1 through the deterministic fixed-step ODE backend (M20).
+- Data-Driven V1 through the deterministic ridge-VAR(p) forecasting backend (M21).
 
-Mathematical and data-driven paradigms remain unexecutable until their model
-contracts and backends are implemented.
+Mathematical and data-driven execution use the same integrity-checked M8 artifact and provenance-verified M9 lifecycle as DES and ABM.
 
 ## 2. Execution flow
 
@@ -28,7 +30,7 @@ Strict M8 JSON load + SHA-256 integrity check
 Check readiness metadata and supported paradigm
        |
        v
-Rebuild native DES Scenario or ABM AgentModel
+Rebuild the native DES, ABM, mathematical or data-driven model
        |
        v
 Check optional parameter sets against exact M8 user_parameter bindings
@@ -41,7 +43,7 @@ Check total execution count and estimated trace budget
        |
        v
 For each parameter set and replication:
-  - assign a reproducible ABM seed, or no seed for deterministic DES
+  - assign a reproducible ABM seed; deterministic DES, mathematical and data-driven backends consume no random seed
   - execute through the existing paradigm backend
   - capture backend metrics and native trace
   - record timing or a bounded failure description
@@ -101,10 +103,10 @@ ABM V1 uses `random.Random(model.random_seed)`. M9 uses an explicit
 in the compiled ABM model. Run `i` receives `base_seed + i - 1`. A compiled ABM
 with no seed must be supplied one before M9 will execute it.
 
-DES V1 has no stochastic behavior or random-number-generator input. Repeated
-DES runs therefore repeat the same deterministic scenario. M9 records a null
-seed and rejects a supplied base seed instead of pretending that the DES
-backend consumed it.
+DES V1, Mathematical V1 and Data-Driven V1 have no stochastic behavior or
+random-number-generator input. Repeated runs therefore repeat the same
+deterministic model and experiment. M9 records a null seed and rejects a
+supplied base seed instead of pretending that these backends consumed it.
 
 ## 5. Explicit parameter variation
 
@@ -129,6 +131,9 @@ Each successful run stores:
 - DES: ordered runtime events, per-entity metrics and per-resource metrics.
 - ABM: the initial and per-step population snapshots, each agent's state and
   attributes, rule-evaluation outcomes and final state counts.
+- Mathematical: solver metadata, the full ODE time series and per-variable summaries.
+- Data-driven: dataset reference ID, VAR coefficients, training/holdout sizes,
+  one-step walk-forward holdout predictions, error metrics and recursive forecast.
 - Run number, parameter-set name and exact parameter overrides, effective
   seed (if applicable), UTC start/end timestamps and elapsed wall-clock
   duration.
@@ -162,9 +167,11 @@ The result trace is a machine-readable record, not yet a visualization or
 scientific interpretation layer. Simulation budgets are record-count guards,
 not hard wall-clock timeouts.
 
-## 9. Next step
+## 9. Future extensions
 
-A following milestone can provide experiment comparison and analysis across
-saved M9 runs: distribution summaries, automatic parameter-grid generation,
-sensitivity analysis, visual comparison and interpretation while maintaining
-the same provenance links and uncertainty boundaries.
+M10 already provides bounded parameter sweeps and comparative analysis, and
+M11 provides uncertainty/robustness analysis. Future work can improve
+rolling-origin backtesting, probabilistic forecast intervals, model-order
+selection, and dedicated mathematical/data-driven M12 visualization while
+preserving the same M8/M9 provenance boundaries. These capabilities are not
+part of the M21 implementation.

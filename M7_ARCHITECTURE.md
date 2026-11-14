@@ -69,9 +69,9 @@ The heuristics are transparent screening rules, not learned classifiers. The imp
 - `NOT_ASSESSABLE`: conceptual validation has one or more errors.
 - `NEEDS_CLARIFICATION`: no concepts exist, the model has no relationship/mechanism structure, blocking questions remain, or a mechanism lacks operational definition.
 - `READY_FOR_EVALUATION`: the project has a valid conceptual structure adequate for comparing paradigms; this is not simulation execution readiness.
-- `READY_FOR_IMPLEMENTATION_PLANNING`: a paradigm was explicitly selected, its fit is strong, required clarification items are absent, all mechanisms have trigger/effect/operational definitions, its missing-requirements list is empty, and its backend is implemented.
+- `READY_FOR_IMPLEMENTATION_PLANNING`: a paradigm was explicitly selected, its fit is strong, required clarification items are absent, its paradigm-specific requirements are satisfied, and its backend is implemented. DES and ABM require operational mechanisms. Mathematical readiness can be supplied by an explicit quantitative relationship when no prose mechanism is required. Data-driven readiness is based on dataset evidence plus measurable and temporal fields; unresolved causal-mechanism questions may still be shown as non-blocking clarifications, but observed predictive associations are not converted into asserted causal mechanisms.
 
-A mathematical or data-driven paradigm cannot reach implementation-planning readiness in this milestone because its backend is marked `assessment_only`.
+At the original M7 release, mathematical and data-driven paradigms were assessment-only. M20 subsequently implemented the mathematical backend, and M21 implemented the data-driven backend; both now participate in the readiness gate through their own paradigm-specific requirements.
 
 ## 6. Recommendation policy
 
@@ -88,7 +88,7 @@ A user may select a paradigm after reviewing the assessment. Selection is not a 
 - The rule evaluators use existing M4 fields and transparent lexical/structural signals; they do not infer missing equations or behavioural rules.
 - Some theories legitimately combine paradigms. The report can recommend multiple candidates.
 - Fit results depend on how completely the idea has been formalized; poor wording can hide a relevant structural signal.
-- The current readiness policy is intentionally conservative and may ask users to define a mechanism before implementation planning.
+- The readiness policy is paradigm-specific: operational mechanisms are required for DES/ABM, a quantitative relationship or operational quantitative rule is required for mathematical models, and dataset/measurable/temporal evidence is required for data-driven forecasting. Data-driven readiness does not imply causal identification or data-file quality verification.
 - Backend availability reflects delivered project packages, not whether every dependency is installed in the current Python environment.
 - Future work can add evaluators through a registry/protocol, but any new paradigm should define its own evidence signals and readiness requirements rather than forcing it into another paradigm's model.
 - M7 does not select an engine automatically, translate models, run experiments, validate datasets, or claim theoretical truth.

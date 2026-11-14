@@ -1,0 +1,45 @@
+M21 — Data-Driven Simulation Engine
+===================================
+
+Use the update archive with the existing project repository. Do not extract
+the complete project snapshot over the existing repository.
+
+Windows paths:
+  New milestone files: D:\Project Simulator\milestones
+  Existing repository: D:\Project Simulator\simulator_real_reorganized
+
+1. Extract the update archive
+
+  cd "D:\Project Simulator\simulator_real_reorganized"
+  Expand-Archive -LiteralPath "D:\Project Simulator\milestones\M21_Updates.zip" -DestinationPath . -Force
+
+2. Run focused M21 tests
+
+  python -m pytest -q tests/data_driven
+  python -m pytest -q tests/compilation/test_data_driven_compilation.py
+  python -m pytest -q tests/execution/test_data_driven_execution.py
+  python -m pytest -q tests/readiness/test_engine.py
+  python -m pytest -q tests/workbench/test_workspace.py
+
+3. Run regressions for earlier numerical and replay milestones
+
+  python -m pytest -q tests/mathematical
+  python -m pytest -q tests/simulation_studio/test_des_replay.py
+  python -m pytest -q tests/des/test_replay.py
+
+4. Run the synthetic data-driven example
+
+  python -m simulations.data_driven.demo
+
+5. Run the complete test suite
+
+  python -m pytest -q
+
+Do not commit until the tests pass in the Windows repository. The build
+container used during M21 packaging did not have the optional `simpy` and
+`groq` dependencies, so full-suite collection could not complete there.
+
+M21 input contract: regular numeric time index, complete numeric observations,
+1-12 variables, 8-10,000 rows, lag-feature count <=24 and forecast horizon
+1-500. The CSV helper accepts an explicitly selected local file and embeds
+selected observations into the M8 profile; its source path is not persisted.

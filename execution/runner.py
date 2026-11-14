@@ -43,6 +43,9 @@ def _parse_model(artifact: CompilationArtifact, model_data: dict[str, Any] | Non
     if artifact.paradigm is CompilationParadigm.MATHEMATICAL:
         from simulations.mathematical.model import mathematical_model_from_dict
         return mathematical_model_from_dict(data)
+    if artifact.paradigm is CompilationParadigm.DATA_DRIVEN:
+        from simulations.data_driven.model import data_driven_model_from_dict
+        return data_driven_model_from_dict(data)
     raise ValueError(f"Unsupported M9 execution paradigm: {artifact.paradigm.value}")
 
 
@@ -53,6 +56,8 @@ def _simulation_paradigm(artifact: CompilationArtifact) -> SimulationParadigm:
         return SimulationParadigm.AGENT_BASED
     if artifact.paradigm is CompilationParadigm.MATHEMATICAL:
         return SimulationParadigm.MATHEMATICAL
+    if artifact.paradigm is CompilationParadigm.DATA_DRIVEN:
+        return SimulationParadigm.DATA_DRIVEN
     raise ValueError(f"Unsupported execution paradigm: {artifact.paradigm.value}")
 
 
@@ -77,6 +82,14 @@ def _estimate_trace_records(artifact: CompilationArtifact, model_data: dict[str,
         step = float(time_data.get("step", 1.0))
         steps = max(1, math.ceil((end - start) / step))
         return (steps + 1) * (len(data.get("variables", [])) + 1)
+    if artifact.paradigm is CompilationParadigm.DATA_DRIVEN:
+        variables = len(data.get("variables", []))
+        observations = len(data.get("observations", []))
+        horizon = int(data.get("forecast_horizon", 0))
+        lag = int(data.get("lag_order", 1))
+        sample_count = max(0, observations - lag)
+        holdout = max(0, sample_count - math.floor(sample_count * float(data.get("train_fraction", 0.8))))
+        return variables * (holdout + horizon) + variables * variables * lag
     if artifact.paradigm is CompilationParadigm.DISCRETE_EVENT:
         stage_count = 0
         for job in data.get("jobs", []):
@@ -309,6 +322,32 @@ def _capture_trace(native_result: Any, paradigm: CompilationParadigm) -> dict[st
             "time_series": snapshots,
         })
 
+    if paradigm is CompilationParadigm.DATA_DRIVEN:
+        return _json_safe({
+            "method": native_result.method,
+            "dataset_reference_id": native_result.dataset_reference_id,
+            "time_unit": native_result.time_unit,
+            "time_step": native_result.time_step,
+            "variables": list(native_result.variables),
+            "lag_order": native_result.lag_order,
+            "ridge": native_result.ridge,
+            "training_samples": native_result.training_samples,
+            "holdout_samples": native_result.holdout_samples,
+            "evaluation_strategy": native_result.evaluation_strategy,
+            "forecast_horizon": native_result.forecast_horizon,
+            "coefficients": native_result.coefficients,
+            "evaluation_metrics": native_result.evaluation_metrics,
+            "holdout_predictions": [
+                {"time": item.time, "actual": item.actual, "predicted": item.predicted,
+                 "persistence_baseline": item.persistence_baseline}
+                for item in native_result.holdout_predictions
+            ],
+            "forecast": [
+                {"time": item.time, "values": item.values}
+                for item in native_result.forecast
+            ],
+        })
+
     raise ValueError(f"No trace serializer for {paradigm.value}")
 
 
@@ -335,6 +374,9 @@ def _execute_once(
     elif artifact.paradigm is CompilationParadigm.MATHEMATICAL:
         from simulations.mathematical.backend import MathematicalBackend
         execution = MathematicalBackend().execute(specification)
+    elif artifact.paradigm is CompilationParadigm.DATA_DRIVEN:
+        from simulations.data_driven.backend import DataDrivenBackend
+        execution = DataDrivenBackend().execute(specification)
     else:
         raise ValueError(f"No backend is implemented for {artifact.paradigm.value}")
 
@@ -367,6 +409,7 @@ def execute_artifact(
         CompilationParadigm.DISCRETE_EVENT: "DES V1 / SimPy backend",
         CompilationParadigm.AGENT_BASED: "ABM V1 backend",
         CompilationParadigm.MATHEMATICAL: "Mathematical V1 / Fixed-Step ODE backend",
+        CompilationParadigm.DATA_DRIVEN: "Data-Driven V1 / Ridge VAR(p) backend",
     }
     if artifact.paradigm not in expected_backends:
         raise ValueError(f"M9 does not implement the {artifact.paradigm.value} paradigm")
@@ -375,7 +418,11 @@ def execute_artifact(
             f"M8 artifact backend mismatch for {artifact.paradigm.value}: "
             f"expected {expected_backends[artifact.paradigm]!r}, got {artifact.backend_name!r}"
         )
-    if artifact.paradigm in {CompilationParadigm.DISCRETE_EVENT, CompilationParadigm.MATHEMATICAL} and settings.base_seed is not None:
+    if artifact.paradigm in {
+        CompilationParadigm.DISCRETE_EVENT,
+        CompilationParadigm.MATHEMATICAL,
+        CompilationParadigm.DATA_DRIVEN,
+    } and settings.base_seed is not None:
         raise ValueError(f"{artifact.paradigm.value} execution is deterministic and does not consume random seeds; omit base_seed")
 
     base_seed = settings.base_seed

@@ -1,4 +1,4 @@
-"""Project-scoped orchestration across the existing M7-M12 workflows (M13)."""
+"""Project-scoped orchestration across the existing M7-M12 workflows (M13/M21)."""
 
 from __future__ import annotations
 

@@ -16,7 +16,7 @@ save_result(result, "outputs/my-project_m9_execution.json")
 
 For ABM, `base_seed` is optional only when the compiled model already has a
 `random_seed`. Run seeds are consecutive: 100, 101, 102, and so on. An ABM
-without either seed is rejected. DES V1 and Mathematical V1 are deterministic, so their `base_seed`
+without either seed is rejected. DES V1, Mathematical V1 and Data-Driven V1 are deterministic, so their `base_seed`
 must remain unset and each run records `seed: null`.
 
 ## Result structure
@@ -28,7 +28,7 @@ contains backend-neutral metrics, elapsed wall-clock duration, timestamps and
 a structured trace. Failed runs contain an error type and bounded message.
 
 DES traces store events, entity metrics, resource metrics and the M19 replay projection. ABM traces store
-step snapshots for every agent, rule-evaluation records and final state counts. Mathematical traces store the complete fixed-step time series, selected solver, variable units and initial/final/minimum/maximum summaries.
+step snapshots for every agent, rule-evaluation records and final state counts. Mathematical traces store the complete fixed-step time series, selected solver, variable units and initial/final/minimum/maximum summaries. Data-driven traces store the dataset evidence ID, ridge-VAR coefficients, chronological holdout predictions/metrics and recursive forecast values.
 
 ## Limits and safeguards
 
@@ -37,7 +37,7 @@ step snapshots for every agent, rule-evaluation records and final state counts. 
 - The runner estimates trace size and blocks experiments above 500,000 records.
 - The M8 artifact must pass its stored model and artifact fingerprints and must
   carry `ready_for_implementation_planning` readiness metadata.
-- Mathematical execution uses bounded fixed-step ODE integration and is subject to the same M9 trace-size guard. Data-driven execution remains unsupported.
+- Mathematical execution uses bounded fixed-step ODE integration; data-driven execution uses a validated, bounded ridge-VAR(p) model. Both are deterministic and subject to the same M9 trace-size guard.
 - Result JSON is fingerprinted, strictly decoded and atomically written.
 
 The result fingerprint detects changes to the saved record; it is not a

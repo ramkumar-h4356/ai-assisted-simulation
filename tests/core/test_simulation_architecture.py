@@ -125,3 +125,16 @@ def test_mathematical_paradigm_is_available_in_common_simulation_contract():
         "ODE model", SimulationParadigm.MATHEMATICAL, {"variables": []}
     )
     assert specification.paradigm is SimulationParadigm.MATHEMATICAL
+
+
+def test_data_driven_paradigm_is_available_for_backend_registration():
+    from simulations.core.specification import SimulationParadigm
+
+    class FakeDataBackend(FakeBackend):
+        name = "Fake Data Backend"
+        paradigm = SimulationParadigm.DATA_DRIVEN
+
+    registry = BackendRegistry()
+    backend = FakeDataBackend()
+    registry.register(backend)
+    assert registry.get(SimulationParadigm.DATA_DRIVEN) is backend

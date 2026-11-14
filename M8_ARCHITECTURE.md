@@ -10,11 +10,11 @@ execute a simulation.
 The supported target backends are:
 
 - DES V1 / SimPy, using `Scenario` and `scenario_from_dict`.
-- ABM V1, using `AgentModel`, `agent_model_from_dict` and
-  `validate_agent_model`.
+- ABM V1, using `AgentModel`, `agent_model_from_dict` and `validate_agent_model`.
+- Mathematical V1, using the validated ODE model contract and safe expression parser (M20).
+- Data-Driven V1, using the validated regular-time-series VAR(p) model contract (M21).
 
-Mathematical and data-driven paradigms remain assessment-only under M7 and are
-rejected by M8 until actual execution backends exist.
+At the original M8 release, mathematical and data-driven profiles were rejected because the execution backends did not yet exist. M20 added the mathematical profile/compile path and M21 added the data-driven profile/compile path.
 
 ## 2. Why compilation profiles are explicit
 
@@ -56,7 +56,7 @@ M7 assess_readiness(project, selected_paradigm)
                 v
        User-approved CompilationProfile
        - exact project and revision IDs
-       - selected DES or ABM paradigm
+       - selected implemented paradigm: DES, ABM, mathematical or data-driven
        - native target model_data
        - provenance bindings
                 |
@@ -65,19 +65,20 @@ M7 assess_readiness(project, selected_paradigm)
        - revision identity is current
        - source element IDs exist
        - target paths exist
-       - at least one concept is bound
-       - at least one mechanism is bound
+       - target-specific provenance bindings are present
+       - data-driven profiles bind `dataset_reference_id` to a DATASET evidence reference
+       - quantitative mathematical profiles bind their governing relationship/mechanism
                 |
                 v
        Existing native model parser
-         /                    \
-        v                      v
-   DES Scenario           ABM AgentModel
-   schema/domain checks   schema + semantic validation
-         \                    /
-          +---------+----------+
-                    |
-                    v
+       /          |           |            \
+      v           v           v             v
+  DES Scenario  ABM Model  Mathematical  Data-Driven
+  parser        validator  ODE parser    VAR parser
+       \          |          |            /
+        +----------+----------+-----------+
+                   |
+                   v
        SimulationSpecification
        + revision-bound CompilationArtifact
        + SHA-256 model fingerprint
@@ -112,9 +113,12 @@ and refuses a payload whose model or provenance content no longer matches.
 ### `main.py`
 
 Option 8 supports the interactive workflow. It loads a saved conceptual
-project, lets the user select DES or ABM, checks M7 readiness, creates an
-incomplete editable template when no profile path is supplied, or compiles a
-provided profile and saves a specification artifact.
+project, lets the user select DES, ABM, mathematical or data-driven,
+checks M7 readiness, creates an incomplete editable template when no profile
+path is supplied, or compiles a provided profile and saves a specification
+artifact. For data-driven profiles, the template directs the user to import
+selected CSV columns through the M21 CSV helper and bind the exact dataset
+evidence-reference ID.
 
 ## 5. Validation rules
 
@@ -126,7 +130,7 @@ Compilation is blocked when any of the following applies:
   paradigm;
 - a conceptual source element ID is not present in that revision;
 - a target path is invalid, missing, out of range or uses a wildcard;
-- no conceptual element or no operational mechanism is bound;
+- required target-specific provenance is missing (including the exact dataset evidence binding for data-driven models or a quantitative relationship/mechanism for mathematical models);
 - the native target model fails its existing parser/domain checks; or
 - ABM semantic validation reports errors.
 
@@ -158,6 +162,24 @@ references/rule IDs. It does not manufacture model facts, populations,
 parameter values or behavioural rules. The normalized validated model is what
 is persisted in the compiled artifact.
 
+### Mathematical
+
+The profile satisfies the M20 ODE model schema, including explicit state
+variables, initial values, derivative expressions, parameter values, time
+range, fixed step and solver. M8 binds the governing quantitative relationship
+or operational quantitative mechanism to the profile provenance.
+
+### Data-driven
+
+The profile satisfies the M21 regular-time-series schema. It names a dataset
+evidence reference and binds `dataset_reference_id` to that exact evidence
+record in the selected conceptual revision. It embeds numeric observations,
+a regular time index, variables, lag order, chronological training fraction,
+ridge strength and forecast horizon. The source path is not persisted. The
+compiled artifact embeds the selected observation values and is portable.
+The data-driven profile does not require a causal mechanism binding: M21 fits
+predictive associations only and makes no causal claim.
+
 ## 7. Artifact and integrity
 
 Each successful artifact records:
@@ -177,15 +199,15 @@ fingerprints before accepting the data.
 
 ## 8. Non-goals
 
-M8 does not execute DES/ABM, run experiments, optimize parameters, infer
-initial populations, invent rules, or claim that a simulation validates the
-underlying theory. It does not compile mathematical or data-driven models.
-Those require distinct model contracts and backends.
+M8 does not execute a simulation, run experiments, optimize parameters,
+infer initial populations, invent rules, discover causal relationships, or
+claim that a simulation validates the underlying theory. Mathematical and
+data-driven profiles use distinct model contracts and provenance requirements.
 
-## 9. Next architectural step
+## 9. Execution integration
 
-M9 should focus on controlled execution of a validated M8 artifact: explicit
-backend selection, bounded execution settings, seeded reproducibility,
-structured result capture, safe failure handling and links from output metrics
-back to the compiled artifact/revision. Experiment comparison and sensitivity
-analysis should follow only after the single-run path is verified.
+M9 consumes the revision-bound compilation artifact through strict integrity
+verification and dispatches to the selected DES, ABM, mathematical or
+data-driven backend. It captures native traces, bounded metrics and links each
+run back to the exact compiled artifact and conceptual revision. See
+`M9_ARCHITECTURE.md` for execution, replay and result-persistence semantics.

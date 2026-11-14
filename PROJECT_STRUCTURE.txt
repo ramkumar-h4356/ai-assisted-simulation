@@ -11,6 +11,8 @@ main.py
 requirements-dev.txt
 requirements.txt
 scenarios/
+    data_driven/
+        synthetic_coupled_series.json
     disease_transmission_abm.json
     .gitkeep
 scripts/
@@ -35,6 +37,10 @@ simulations/
     simulations/data_driven/
         README.md
         __init__.py
+        backend.py
+        csv_io.py
+        demo.py
+        model.py
     simulations/des/
         __init__.py
         backend.py
@@ -51,6 +57,9 @@ simulations/
         README.md
         __init__.py
 tests/
+    data_driven/
+        __init__.py
+        test_model_and_backend.py
     __init__.py
     tests/abm/
         __init__.py
@@ -164,7 +173,7 @@ Milestone 8 additions:
 compilation/
   __init__.py       Public M8 compilation, models and serialization API
   models.py         Strict profile, binding, issue, artifact and result contracts
-  compiler.py       M7 gate, revision/provenance checks and DES/ABM native compilation
+  compiler.py       M7 gate, revision/provenance checks and DES/ABM/mathematical/data-driven native compilation
   serialization.py Strict profile/artifact JSON persistence and fingerprint verification
   profile.schema.json JSON Schema for editable M8 compilation profiles
   demo.py           Offline demonstration of explicit ABM compilation
@@ -301,6 +310,8 @@ simulations/abm/
   schema.py               Strict M18 space.grid/regions/zones/objects parser
   engine.py               SpatialIndex-backed live neighbourhood queries and indexed position updates
 scenarios/
+    data_driven/
+        synthetic_coupled_series.json
   spatial_environment_navigation_m18.json   Park navigation around a blocking tree and impassable lake
 tests/abm/
   test_environment_m18.py  Grid, polygon, object, terrain routing, index and M18 scenario tests
@@ -350,3 +361,23 @@ M20_ARCHITECTURE.md        Mathematical model, safe expression and integration a
 MILESTONE20_REPORT.md      M20 implementation summary and scope boundaries
 M20_TEST_REPORT.md        Focused test results and full-suite environment limitation
 M20_APPLY_STEPS.txt       Windows update and verification commands
+
+Milestone 21 additions:
+simulations/data_driven/
+  model.py       Strict regular-time-series VAR(p) model contract and bounds
+  backend.py     Deterministic ridge-VAR fitting, chronological holdout evaluation and recursive forecast
+  csv_io.py      Bounded explicit CSV column selection and validation; source paths are not persisted
+  demo.py        Synthetic coupled-series demonstration
+scenarios/data_driven/
+  synthetic_coupled_series.json  Small synthetic multivariate time-series example
+tests/data_driven/
+  test_model_and_backend.py  Schema bounds, deterministic fit, metrics, forecast and CSV-import tests
+tests/compilation/
+  test_data_driven_compilation.py  M7 readiness, exact DATASET evidence binding and M8 artifact checks
+tests/execution/
+  test_data_driven_execution.py  M9 trace, parameter variant, seed policy and fingerprint tests
+workbench/extensions.py   Built-in Data-Driven V1 lifecycle adapter
+M21_ARCHITECTURE.md       VAR(p), CSV ingestion, compilation and M9 integration design
+MILESTONE21_REPORT.md     M21 implementation summary and epistemic limitations
+M21_TEST_REPORT.md        Focused and regression test results
+M21_APPLY_STEPS.txt       Windows update and verification commands

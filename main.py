@@ -565,7 +565,7 @@ def run_compilation_workflow():
     print("  1. Discrete-event (DES V1 / SimPy)")
     print("  2. Agent-based (ABM V1)")
     print("  3. Mathematical (Mathematical V1 / ODE: Euler, Heun, RK4)")
-    print("  4. Data-driven (assessment only; no M8 backend)")
+    print("  4. Data-driven (Data-Driven V1 / ridge VAR(p) forecasting)")
     selected = input("Paradigm (1-4): ").strip()
     mapping = {
         "1": (CompilationParadigm.DISCRETE_EVENT, Paradigm.DISCRETE_EVENT),
@@ -582,9 +582,6 @@ def run_compilation_workflow():
     print(f"\nM7 status: {readiness_report.status.value}")
     print(f"Paradigm fit: {selected_assessment.fit.value}")
     print(f"Backend: {selected_assessment.backend_status.value}")
-    if selected == "4":
-        print("Data-driven simulation can be assessed in M7, but its executable backend has not been implemented. M8 will not create a pretend model.")
-        return
     if readiness_report.status.value != "ready_for_implementation_planning":
         print("M8 requires M7 status ready_for_implementation_planning. Resolve the listed M7 questions first.")
         for question in readiness_report.clarification_items:
@@ -604,6 +601,9 @@ def run_compilation_workflow():
         print(f"\nAn intentionally incomplete template was created: {template_path}")
         print("Edit model_data with explicit runtime values, then add bindings that connect target paths to current conceptual element IDs.")
         print("Use source='user_parameter' with a clear note for experiment values; do not present illustrative values as evidence.")
+        if target_paradigm is CompilationParadigm.DATA_DRIVEN:
+            print("For CSV observations, use simulations.data_driven.load_csv_model_data(...) and place the returned model_data in this profile.")
+            print("Bind dataset_reference_id to the exact DATASET evidence-reference ID shown in the project source catalog.")
         print("Run option 8 again and provide the edited profile path.")
         return
 
@@ -706,7 +706,7 @@ def run_execution_workflow():
                 print("Base seed must be a non-negative integer.")
                 return
     else:
-        print("DES V1 is deterministic; it does not use random seeds.")
+        print(f"{artifact.paradigm.value} is deterministic; this backend does not use random seeds.")
 
     parameter_sets = ()
     parameter_path_text = input("Optional JSON file with parameter sets (blank uses the compiled baseline): ").strip().strip('"')

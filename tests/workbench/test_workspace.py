@@ -110,12 +110,13 @@ def test_manifest_rejects_unknown_fields_and_duplicate_artifact_ids():
         loads_manifest(json.dumps({**base, "unexpected": True}))
 
 
-def test_builtin_extension_registry_contains_working_des_abm_and_mathematical_adapters():
+def test_builtin_extension_registry_contains_working_des_abm_math_and_data_adapters():
     registry = create_builtin_registry()
-    assert {item.paradigm for item in registry.descriptors} == {"discrete_event", "agent_based", "mathematical"}
+    assert {item.paradigm for item in registry.descriptors} == {"discrete_event", "agent_based", "mathematical", "data_driven"}
     assert registry.get("builtin.des.v1").descriptor.model_schema_versions == ("m8-des-v1",)
     assert registry.for_paradigm("agent_based").descriptor.extension_id == "builtin.abm.v1"
     assert registry.for_paradigm("mathematical").descriptor.extension_id == "builtin.mathematical.v1"
+    assert registry.for_paradigm("data_driven").descriptor.extension_id == "builtin.data_driven.v1"
 
 
 def test_extension_registry_rejects_duplicate_paradigms():
@@ -355,3 +356,36 @@ def test_end_to_end_mathematical_workflow_runs_inside_one_workspace(tmp_path):
     assert result_record is not None
     assert result.runs[0].trace["time_series"][-1]["time"] == 5.0
     assert all(item.valid for item in service.verify())
+
+
+def test_end_to_end_data_driven_workflow_runs_inside_one_workspace(tmp_path):
+    from compilation import save_profile
+    from conceptual import save_idea_project
+    from execution import ExperimentConfig
+    from tests.compilation.helpers import data_driven_profile
+    from tests.readiness.helpers import data_project
+    from workbench import WorkbenchService
+
+    project = data_project()
+    manager = WorkspaceManager(tmp_path / "workspaces")
+    workspace = manager.create("Weather data analysis", project.original_statement)
+    idea_path = tmp_path / "idea_project.json"
+    save_idea_project(project, idea_path)
+    workspace.add_artifact(idea_path, ArtifactType.IDEA_PROJECT)
+
+    service = WorkbenchService(workspace)
+    readiness, _ = service.assess("data_driven")
+    assert readiness.can_begin_implementation_planning
+
+    profile_path = tmp_path / "data_driven_profile.json"
+    save_profile(data_driven_profile(project), profile_path)
+    profile_record = workspace.add_artifact(profile_path, ArtifactType.COMPILATION_PROFILE)
+    compilation, compilation_record = service.compile(profile_record.artifact_id)
+    assert compilation.is_ready
+    assert compilation_record is not None
+
+    result, result_record = service.execute(compilation_record.artifact_id, ExperimentConfig())
+    assert result.status.value == "completed"
+    assert result.paradigm == "data_driven"
+    assert result.runs[0].trace["forecast"]
+    assert result_record.metadata["paradigm"] == "data_driven"

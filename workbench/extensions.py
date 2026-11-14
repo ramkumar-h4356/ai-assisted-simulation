@@ -142,7 +142,7 @@ class BuiltInParadigmAdapter:
 
 
 def create_builtin_registry() -> ExtensionRegistry:
-    """Return a registry containing the executable DES, ABM and mathematical adapters."""
+    """Return a registry containing the executable DES, ABM, math and data adapters."""
     from compilation import CompilationParadigm
     from readiness import Paradigm
 
@@ -170,5 +170,13 @@ def create_builtin_registry() -> ExtensionRegistry:
             model_schema_versions=("m8-mathematical-v1",),
             capabilities=("validate", "compile", "execute", "serialize_result", "validate_result"),
         ), CompilationParadigm.MATHEMATICAL, Paradigm.MATHEMATICAL,
+    ))
+    registry.register(BuiltInParadigmAdapter(
+        ExtensionDescriptor(
+            extension_id="builtin.data_driven.v1", display_name="Data-driven simulation (VAR forecasting)",
+            version="1.0.0", paradigm="data_driven",
+            model_schema_versions=("m8-data-driven-v1",),
+            capabilities=("validate", "compile", "execute", "serialize_result", "validate_result"),
+        ), CompilationParadigm.DATA_DRIVEN, Paradigm.DATA_DRIVEN,
     ))
     return registry
