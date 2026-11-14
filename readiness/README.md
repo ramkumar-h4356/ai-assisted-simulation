@@ -1,8 +1,8 @@
 # M7 — Simulation Readiness and Paradigm Suitability
 
 M7 assesses a saved M4 conceptual revision and reports qualitative fit and
-implementation-planning readiness for four paradigms: DES, ABM, mathematical
-and data-driven. It is a deterministic, transparent screening layer; it does
+implementation-planning readiness for five paradigms: DES, ABM, mathematical,
+data-driven and system dynamics. It is a deterministic, transparent screening layer; it does
 not validate a scientific theory, prove a causal relationship or execute a
 simulation.
 
@@ -29,6 +29,10 @@ for item in report.assessments:
   properties and a temporal property. Data-driven readiness does not require
   a causal operational mechanism because M21 estimates predictive
   associations only.
+- **System dynamics:** accumulated stock/level concepts, flow-like mechanisms
+  or relationships, numeric state/rate properties and an explicit time basis.
+  Feedback-loop signals are screened but must still be reviewed and mapped by
+  the user; M7 does not infer a loop's polarity or prove its causal meaning.
 
 A strong qualitative fit is not enough on its own. Implementation planning
 also requires the selected paradigm's missing requirements and blocking

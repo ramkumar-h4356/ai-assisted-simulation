@@ -34,18 +34,21 @@ _BACKEND_NAMES = {
     CompilationParadigm.AGENT_BASED: "ABM V1 backend",
     CompilationParadigm.MATHEMATICAL: "Mathematical V1 / Fixed-Step ODE backend",
     CompilationParadigm.DATA_DRIVEN: "Data-Driven V1 / Ridge VAR(p) backend",
+    CompilationParadigm.SYSTEM_DYNAMICS: "System Dynamics V1 / Stock-and-Flow backend",
 }
 _SIMULATION_PARADIGMS = {
     CompilationParadigm.DISCRETE_EVENT: SimulationParadigm.DISCRETE_EVENT,
     CompilationParadigm.AGENT_BASED: SimulationParadigm.AGENT_BASED,
     CompilationParadigm.MATHEMATICAL: SimulationParadigm.MATHEMATICAL,
     CompilationParadigm.DATA_DRIVEN: SimulationParadigm.DATA_DRIVEN,
+    CompilationParadigm.SYSTEM_DYNAMICS: SimulationParadigm.SYSTEM_DYNAMICS,
 }
 _READINESS_PARADIGMS = {
     CompilationParadigm.DISCRETE_EVENT: Paradigm.DISCRETE_EVENT,
     CompilationParadigm.AGENT_BASED: Paradigm.AGENT_BASED,
     CompilationParadigm.MATHEMATICAL: Paradigm.MATHEMATICAL,
     CompilationParadigm.DATA_DRIVEN: Paradigm.DATA_DRIVEN,
+    CompilationParadigm.SYSTEM_DYNAMICS: Paradigm.SYSTEM_DYNAMICS,
 }
 
 
@@ -192,13 +195,16 @@ def _validate_bindings(project: IdeaProject, profile: CompilationProfile) -> lis
         )
     )
     has_governing_binding = bool(seen_mechanisms) or (
-        profile.paradigm is CompilationParadigm.MATHEMATICAL and bool(seen_relationships)
+        profile.paradigm in {CompilationParadigm.MATHEMATICAL, CompilationParadigm.SYSTEM_DYNAMICS}
+        and bool(seen_relationships)
     ) or data_reference_bound
     if not has_governing_binding:
         if profile.paradigm is CompilationParadigm.MATHEMATICAL:
             issues.append(_issue("M8_NO_GOVERNING_RELATION_BINDING", "bindings", "At least one quantitative relationship or operational mechanism must be bound to a governing equation."))
         elif profile.paradigm is CompilationParadigm.DATA_DRIVEN:
             issues.append(_issue("M8_DATASET_REFERENCE_NOT_BOUND", "bindings", "The model dataset_reference_id must match a DATASET evidence reference and be bound to that exact conceptual evidence ID."))
+        elif profile.paradigm is CompilationParadigm.SYSTEM_DYNAMICS:
+            issues.append(_issue("M8_NO_STOCK_FLOW_BINDING", "bindings", "At least one stock-flow equation must be bound to a conceptual mechanism or relationship."))
         else:
             issues.append(_issue("M8_NO_MECHANISM_BINDING", "bindings", "At least one operational mechanism must be bound to a target-model field or subtree. This prevents compiling only nouns while losing the theory's causal rules."))
     for concept in project.current_revision.concepts:
@@ -264,6 +270,10 @@ def compile_profile(project: IdeaProject, profile: CompilationProfile) -> Compil
             from simulations.mathematical.model import mathematical_model_from_dict
             model_data = json.loads(json.dumps(profile.model_data, ensure_ascii=False, allow_nan=False))
             native_model = mathematical_model_from_dict(model_data)
+        elif profile.paradigm is CompilationParadigm.SYSTEM_DYNAMICS:
+            from simulations.system_dynamics.model import system_dynamics_model_from_dict
+            model_data = json.loads(json.dumps(profile.model_data, ensure_ascii=False, allow_nan=False))
+            native_model = system_dynamics_model_from_dict(model_data)
         else:
             from simulations.data_driven.model import data_driven_model_from_dict
             model_data = json.loads(json.dumps(profile.model_data, ensure_ascii=False, allow_nan=False))
@@ -394,6 +404,22 @@ def create_profile_template(project: IdeaProject, paradigm: CompilationParadigm)
             "train_fraction": 0.8,
             "forecast_horizon": 5,
             "ridge": 1e-6,
+        }
+    elif paradigm is CompilationParadigm.SYSTEM_DYNAMICS:
+        model_data = {
+            "schema_version": 1,
+            "name": project.title,
+            "time": {"start": 0.0, "end": 10.0, "step": 0.1, "unit": "time units"},
+            "solver": "rk4",
+            "stocks": [
+                {"name": "stock_one", "initial_value": 100.0, "unit": "units", "minimum": 0.0},
+                {"name": "stock_two", "initial_value": 0.0, "unit": "units", "minimum": 0.0},
+            ],
+            "flows": [
+                {"name": "transfer", "source_stock": "stock_one", "target_stock": "stock_two", "rate_expression": "transfer_rate * stock_one", "unit": "units/time"}
+            ],
+            "auxiliaries": [],
+            "parameters": [{"name": "transfer_rate", "value": 0.1, "unit": "1/time"}],
         }
     else:
         raise ValueError("No M8 profile template exists for this paradigm")

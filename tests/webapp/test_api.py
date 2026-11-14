@@ -203,3 +203,34 @@ def test_upload_limits_and_unknown_workspace_are_handled(tmp_path):
         files={"file": ("large.txt", b"0123456789abcdef", "text/plain")},
     )
     assert response.status_code == 413
+
+
+def test_browser_api_accepts_system_dynamics_readiness_selection(tmp_path):
+    from tests.readiness.test_system_dynamics_readiness import system_dynamics_project
+
+    project = system_dynamics_project()
+    idea_path = tmp_path / "system_dynamics_idea_project.json"
+    save_idea_project(project, idea_path)
+
+    client = TestClient(create_app(tmp_path / "workspaces"))
+    created = client.post("/api/v1/workspaces", json={
+        "title": "System dynamics API readiness",
+        "original_idea": project.original_statement,
+    })
+    assert created.status_code == 201
+    workspace_id = created.json()["overview"]["workspace_id"]
+
+    uploaded = _upload(client, workspace_id, "idea_project", idea_path)
+    assert uploaded.status_code == 201, uploaded.text
+
+    readiness = client.post(
+        f"/api/v1/workspaces/{workspace_id}/readiness",
+        json={"selected_paradigm": "system_dynamics"},
+    )
+    assert readiness.status_code == 200, readiness.text
+    assert readiness.json()["report"]["selected_paradigm"] == "system_dynamics"
+    assessment = next(
+        item for item in readiness.json()["report"]["paradigm_assessments"]
+        if item["paradigm"] == "system_dynamics"
+    )
+    assert assessment["backend_status"] == "implemented"

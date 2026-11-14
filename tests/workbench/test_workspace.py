@@ -112,11 +112,12 @@ def test_manifest_rejects_unknown_fields_and_duplicate_artifact_ids():
 
 def test_builtin_extension_registry_contains_working_des_abm_math_and_data_adapters():
     registry = create_builtin_registry()
-    assert {item.paradigm for item in registry.descriptors} == {"discrete_event", "agent_based", "mathematical", "data_driven"}
+    assert {item.paradigm for item in registry.descriptors} == {"discrete_event", "agent_based", "mathematical", "data_driven", "system_dynamics"}
     assert registry.get("builtin.des.v1").descriptor.model_schema_versions == ("m8-des-v1",)
     assert registry.for_paradigm("agent_based").descriptor.extension_id == "builtin.abm.v1"
     assert registry.for_paradigm("mathematical").descriptor.extension_id == "builtin.mathematical.v1"
     assert registry.for_paradigm("data_driven").descriptor.extension_id == "builtin.data_driven.v1"
+    assert registry.for_paradigm("system_dynamics").descriptor.extension_id == "builtin.system_dynamics.v1"
 
 
 def test_extension_registry_rejects_duplicate_paradigms():

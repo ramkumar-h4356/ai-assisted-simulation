@@ -179,4 +179,12 @@ def create_builtin_registry() -> ExtensionRegistry:
             capabilities=("validate", "compile", "execute", "serialize_result", "validate_result"),
         ), CompilationParadigm.DATA_DRIVEN, Paradigm.DATA_DRIVEN,
     ))
+    registry.register(BuiltInParadigmAdapter(
+        ExtensionDescriptor(
+            extension_id="builtin.system_dynamics.v1", display_name="System dynamics simulation (stock and flow)",
+            version="1.0.0", paradigm="system_dynamics",
+            model_schema_versions=("m8-system-dynamics-v1",),
+            capabilities=("validate", "compile", "execute", "serialize_result", "validate_result"),
+        ), CompilationParadigm.SYSTEM_DYNAMICS, Paradigm.SYSTEM_DYNAMICS,
+    ))
     return registry

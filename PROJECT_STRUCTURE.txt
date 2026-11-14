@@ -381,3 +381,30 @@ M21_ARCHITECTURE.md       VAR(p), CSV ingestion, compilation and M9 integration 
 MILESTONE21_REPORT.md     M21 implementation summary and epistemic limitations
 M21_TEST_REPORT.md        Focused and regression test results
 M21_APPLY_STEPS.txt       Windows update and verification commands
+
+
+Milestone 22 additions:
+simulations/system_dynamics/
+  model.py       Strict M22 stock, flow, auxiliary and parameter contracts; safe expression and dependency validation
+  backend.py     Deterministic Euler, Heun and RK4 stock-flow integration, snapshots and cumulative-flow accounting
+  demo.py        Console demonstration using the SIR stock-flow scenario
+  README.md      Model format, solver semantics, flow direction and V1 limitations
+scenarios/system_dynamics/
+  sir_stock_flow.json  Illustrative susceptible-infected-recovered stock-flow model
+tests/system_dynamics/
+  test_model_and_backend.py  Conservation, solver, safe expressions, flow direction, bounds and failure tests
+tests/compilation/
+  test_system_dynamics_compilation.py  M7/M8 readiness, provenance binding and schema validation tests
+tests/execution/
+  test_system_dynamics_execution.py  M9 trace, parameter sweeps, serialization and integrity tests
+tests/readiness/
+  test_system_dynamics_readiness.py  Stock/flow/feedback readiness screening tests
+readiness/engine.py     M7 system dynamics fit, requirements and clarifications
+compilation/compiler.py M8 system dynamics model validation and revision-bound compilation
+execution/runner.py    M9 system dynamics backend routing, trace capture and size guard
+workbench/extensions.py Built-in System Dynamics V1 lifecycle adapter
+webapp/app.py and webapp/static/index.html  M14 readiness selection for system dynamics
+M22_ARCHITECTURE.md     System dynamics model and integration architecture
+MILESTONE22_REPORT.md   M22 implementation summary and scope boundaries
+M22_TEST_REPORT.md     M22 focused and regression verification
+M22_APPLY_STEPS.txt    Windows update and verification commands

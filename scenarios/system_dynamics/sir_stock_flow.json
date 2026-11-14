@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "name": "SIR stock-flow demonstration",
+  "description": "Illustrative susceptible-infected-recovered system dynamics model.",
+  "time": {"start": 0.0, "end": 80.0, "step": 0.2, "unit": "days"},
+  "solver": "rk4",
+  "stocks": [
+    {"name": "susceptible", "initial_value": 990.0, "unit": "people", "minimum": 0.0},
+    {"name": "infected", "initial_value": 10.0, "unit": "people", "minimum": 0.0},
+    {"name": "recovered", "initial_value": 0.0, "unit": "people", "minimum": 0.0}
+  ],
+  "flows": [
+    {"name": "infection", "source_stock": "susceptible", "target_stock": "infected", "rate_expression": "beta * susceptible * infected / population", "unit": "people/day"},
+    {"name": "recovery", "source_stock": "infected", "target_stock": "recovered", "rate_expression": "gamma * infected", "unit": "people/day"}
+  ],
+  "auxiliaries": [
+    {"name": "population", "expression": "susceptible + infected + recovered", "unit": "people"}
+  ],
+  "parameters": [
+    {"name": "beta", "value": 0.30, "unit": "1/day"},
+    {"name": "gamma", "value": 0.10, "unit": "1/day"}
+  ]
+}

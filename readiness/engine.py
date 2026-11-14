@@ -25,12 +25,17 @@ _BACKENDS = {
     Paradigm.AGENT_BASED: BackendStatus.IMPLEMENTED,
     Paradigm.MATHEMATICAL: BackendStatus.IMPLEMENTED,
     Paradigm.DATA_DRIVEN: BackendStatus.IMPLEMENTED,
+    Paradigm.SYSTEM_DYNAMICS: BackendStatus.IMPLEMENTED,
 }
 
 _TIME_WORDS = re.compile(r"\b(time|duration|delay|arrival|departure|interval|rate|frequency|schedule|period|timestamp)\b", re.I)
 _EVENT_WORDS = re.compile(r"\b(arriv|depart|request|trigger|start|begin|complete|finish|release|interrupt|occur|event|process|service|flow|queue)\w*\b", re.I)
 _BEHAVIOUR_WORDS = re.compile(r"\b(behavio|decision|choose|select|respond|interact|cooperat|compete|move|act|strategy|rule|policy)\w*\b", re.I)
 _QUANT_WORDS = re.compile(r"(?:\b(increas|decreas|proportion|linear|quadratic|exponential|rate|ratio|equation|formula|function|derivative|integral|differential)\w*\b|[=<>+*/^]|\b[a-z]\s*=)", re.I)
+
+_SYSTEM_STOCK_WORDS = re.compile(r"\b(stock|stocks|reservoir|inventory|population|susceptible|infected|recovered|capital|level|accumulat|balance)\w*\b", re.I)
+_SYSTEM_FLOW_WORDS = re.compile(r"\b(flow|inflow|outflow|transfer|birth|death|infection|recovery|growth|depletion|consumption|replenishment|rate)\w*\b", re.I)
+_SYSTEM_FEEDBACK_WORDS = re.compile(r"\b(feedback|reinforcing|balancing|reinforce|stabiliz|self.?regulat|loop)\w*\b", re.I)
 
 
 def _finding(code: str, title: str, explanation: str, *ids: str) -> AssessmentFinding:
@@ -252,6 +257,71 @@ def _evaluate_data_driven(revision) -> ParadigmAssessment:
     return ParadigmAssessment(Paradigm.DATA_DRIVEN, fit, _BACKENDS[Paradigm.DATA_DRIVEN], tuple(findings), tuple(limits), _dedupe(missing), summary)
 
 
+
+def _evaluate_system_dynamics(revision) -> ParadigmAssessment:
+    concepts = revision.concepts
+    stock_concepts = [item for item in concepts if _SYSTEM_STOCK_WORDS.search(item.name + " " + item.definition)]
+    flow_concepts = [item for item in concepts if _SYSTEM_FLOW_WORDS.search(item.name + " " + item.definition)]
+    flow_mechanisms = [item for item in revision.mechanisms if _SYSTEM_FLOW_WORDS.search(_joined_mechanism_text(item))]
+    flow_relationships = [item for item in revision.relationships if _SYSTEM_FLOW_WORDS.search(item.label + " " + item.description)]
+    numeric_properties = [item for item in revision.properties if item.data_type in {PropertyType.NUMBER, PropertyType.INTEGER}]
+    timed_properties = [item for item in revision.properties if item.data_type is PropertyType.DATE_TIME or _TIME_WORDS.search(item.name + " " + item.definition)]
+    feedback_text = " ".join(
+        [item.name + " " + item.definition for item in concepts]
+        + [item.label + " " + item.description for item in revision.relationships]
+        + [_joined_mechanism_text(item) for item in revision.mechanisms]
+    )
+    feedback_signals = bool(_SYSTEM_FEEDBACK_WORDS.search(feedback_text))
+    findings: list[AssessmentFinding] = []
+    limits: list[AssessmentFinding] = []
+    missing: list[str] = []
+
+    if stock_concepts:
+        findings.append(_finding("SD_STOCK_CONCEPTS", "Accumulated state concepts identified", f"The revision contains {len(stock_concepts)} stock/level concept(s) that may represent accumulated quantities.", *(item.id for item in stock_concepts)))
+    if flow_concepts or flow_mechanisms or flow_relationships:
+        ids = [item.id for item in flow_concepts + flow_mechanisms + flow_relationships]
+        findings.append(_finding("SD_FLOW_STRUCTURE", "Flow structure identified", "The revision contains flow-like concepts, relationships or mechanisms that may change stock levels over time.", *ids))
+    if numeric_properties:
+        findings.append(_finding("SD_NUMERIC_STATE", "Numeric state properties identified", "Numeric properties can define initial stock levels, rates or parameters once their semantics and units are specified.", *(item.id for item in numeric_properties)))
+    if timed_properties:
+        findings.append(_finding("SD_TIME_BASIS", "Time basis identified", "Time-related properties provide a candidate temporal basis for stock-flow integration.", *(item.id for item in timed_properties)))
+    if feedback_signals:
+        findings.append(_finding("SD_FEEDBACK_STRUCTURE", "Feedback structure indicated", "The conceptual revision describes feedback or multiple interacting flow mechanisms; explicit polarity and loop interpretation still need user review."))
+
+    if not stock_concepts:
+        missing.append("Identify the quantities that accumulate as stocks or levels over time.")
+    if not (flow_concepts or flow_mechanisms or flow_relationships):
+        missing.append("Define the inflows and outflows that change each stock.")
+    if not numeric_properties:
+        missing.append("Specify numeric initial stock values or rate-related properties.")
+    if not timed_properties:
+        missing.append("Specify the model time basis and the interval over which stock levels evolve.")
+    if not feedback_signals:
+        missing.append("Clarify whether flows interact through reinforcing or balancing feedback loops.")
+    if any(not item.unit for item in numeric_properties):
+        missing.append("Specify units or scales for numeric properties where meaningful.")
+
+    if stock_concepts and (flow_concepts or flow_mechanisms or flow_relationships) and numeric_properties and feedback_signals:
+        fit = FitLevel.STRONG
+    elif stock_concepts or flow_concepts or flow_mechanisms or flow_relationships:
+        fit = FitLevel.POSSIBLE
+    elif concepts:
+        fit = FitLevel.INSUFFICIENT_INFORMATION
+    else:
+        fit = FitLevel.POOR
+    if not timed_properties:
+        limits.append(_finding("SD_TIME_BASIS_MISSING", "Time basis is not explicit", "A stock-flow model needs a defined time unit and integration horizon."))
+    if not feedback_signals:
+        limits.append(_finding("SD_FEEDBACK_UNCONFIRMED", "Feedback structure is not explicit", "The evaluator does not infer a feedback loop from isolated variable names; specify the relevant reinforcing or balancing connections."))
+    summary = {
+        FitLevel.STRONG: "Strong conceptual alignment: accumulated quantities, flow structure, measurable values and feedback signals are represented.",
+        FitLevel.POSSIBLE: "Possible alignment: stock or flow concepts are present, but time, quantitative or feedback foundations need clarification.",
+        FitLevel.INSUFFICIENT_INFORMATION: "The revision does not yet establish an interpretable stock-and-flow structure.",
+        FitLevel.POOR: "The current conceptual elements provide little indication of a system dynamics model.",
+    }[fit]
+    return ParadigmAssessment(Paradigm.SYSTEM_DYNAMICS, fit, _BACKENDS[Paradigm.SYSTEM_DYNAMICS], tuple(findings), tuple(limits), _dedupe(missing), summary)
+
+
 def _clarifications(revision, paradigm_assessments: tuple[ParadigmAssessment, ...], selected: Paradigm | None) -> tuple[ClarificationItem, ...]:
     questions: list[ClarificationItem] = []
     seen: set[str] = set()
@@ -330,12 +400,19 @@ def _clarifications(revision, paradigm_assessments: tuple[ParadigmAssessment, ..
         elif paradigm is Paradigm.DATA_DRIVEN and assessment.fit in {FitLevel.STRONG, FitLevel.POSSIBLE}:
             if not any(item.reference_type is ReferenceType.DATASET for item in revision.evidence_references):
                 add("m7-data-source", "Which observational dataset will be used, and how can it be accessed?", "A data-driven model needs observations, not only a conceptual description.", QuestionPriority.HIGH)
+        elif paradigm is Paradigm.SYSTEM_DYNAMICS and assessment.fit in {FitLevel.STRONG, FitLevel.POSSIBLE}:
+            if not any(_SYSTEM_STOCK_WORDS.search(item.name + " " + item.definition) for item in revision.concepts):
+                add("m7-sd-stocks", "Which quantities accumulate as stocks or levels over time?", "System dynamics requires explicit accumulated state variables.", QuestionPriority.HIGH)
+            if not any(_SYSTEM_FLOW_WORDS.search(item.label + " " + item.description) for item in revision.relationships) and not any(_SYSTEM_FLOW_WORDS.search(_joined_mechanism_text(item)) for item in revision.mechanisms):
+                add("m7-sd-flows", "Which inflows and outflows change the stock levels?", "Flow definitions determine the rates of stock change.", QuestionPriority.HIGH)
+            if not any(_SYSTEM_FEEDBACK_WORDS.search(item.label + " " + item.description) for item in revision.relationships) and not any(_SYSTEM_FEEDBACK_WORDS.search(_joined_mechanism_text(item)) for item in revision.mechanisms) and len(revision.mechanisms) < 2:
+                add("m7-sd-feedback", "Which relationships form reinforcing or balancing feedback loops?", "System dynamics models rely on feedback structure; the loop direction and meaning must be supplied rather than inferred.", QuestionPriority.MEDIUM)
 
     return tuple(questions)
 
 
 def assess_readiness(project: IdeaProject, *, selected_paradigm: Paradigm | str | None = None) -> ReadinessReport:
-    """Assess conceptual readiness and suitability for four simulation paradigms.
+    """Assess conceptual readiness and suitability for five simulation paradigms.
 
     The input project is never modified. If a paradigm is selected, the report
     separately records whether the model is sufficiently specified to begin
@@ -358,6 +435,7 @@ def assess_readiness(project: IdeaProject, *, selected_paradigm: Paradigm | str 
         _evaluate_abm(revision),
         _evaluate_mathematical(revision),
         _evaluate_data_driven(revision),
+        _evaluate_system_dynamics(revision),
     )
     best_fit = max((item.fit for item in assessments), key=lambda value: {
         FitLevel.STRONG: 4, FitLevel.POSSIBLE: 3,
@@ -385,7 +463,7 @@ def assess_readiness(project: IdeaProject, *, selected_paradigm: Paradigm | str 
         has_structure = bool(revision.mechanisms or revision.relationships) or data_driven_structure
         has_blocking_questions = any(item.status is QuestionStatus.OPEN and item.blocking for item in revision.open_questions)
         has_unoperational_mechanism = (
-            selected_paradigm is not Paradigm.DATA_DRIVEN
+            selected_paradigm not in {Paradigm.DATA_DRIVEN}
             and any(not item.operational_definition.strip() for item in revision.mechanisms)
         )
         if not has_structure or has_blocking_questions or has_unoperational_mechanism:
@@ -409,6 +487,11 @@ def assess_readiness(project: IdeaProject, *, selected_paradigm: Paradigm | str 
             # M21 fits predictive patterns from observations. It must not turn
             # those associations into asserted causal mechanisms.
             mechanisms_operational = True
+        elif selected_paradigm is Paradigm.SYSTEM_DYNAMICS and not revision.mechanisms:
+            mechanisms_operational = any(
+                _SYSTEM_FLOW_WORDS.search(item.label + " " + item.description)
+                for item in revision.relationships
+            )
         elif selected_paradigm is Paradigm.MATHEMATICAL and not revision.mechanisms:
             # A mathematical model may be governed directly by an explicit
             # quantitative relationship; a prose mechanism is not mandatory.

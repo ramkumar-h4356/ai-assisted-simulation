@@ -65,7 +65,7 @@ class CreateWorkspaceRequest(BaseModel):
 
 
 class ReadinessRequest(BaseModel):
-    selected_paradigm: Literal["discrete_event", "agent_based", "mathematical", "data_driven"] | None = None
+    selected_paradigm: Literal["discrete_event", "agent_based", "mathematical", "data_driven", "system_dynamics"] | None = None
 
 
 class CompileRequest(BaseModel):

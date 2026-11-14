@@ -1,0 +1,29 @@
+M22 — SYSTEM DYNAMICS ENGINE
+
+1. Download M22_Updates.zip and save it in:
+   D:\Project Simulator\milestones
+
+2. Open PowerShell and run:
+   cd "D:\Project Simulator\simulator_real_reorganized"
+   $source = "D:\Project Simulator\milestones\M22_Updates.zip"
+   Test-Path $source
+
+3. Continue only when Test-Path returns True:
+   Expand-Archive -LiteralPath $source -DestinationPath . -Force
+
+4. Run focused checks:
+   python -m pytest -q tests/system_dynamics
+   python -m pytest -q tests/readiness/test_system_dynamics_readiness.py
+   python -m pytest -q tests/compilation/test_system_dynamics_compilation.py
+   python -m pytest -q tests/execution/test_system_dynamics_execution.py
+   python -m pytest -q tests/workbench/test_workspace.py
+   python -m pytest -q tests/webapp/test_api.py
+   python -m simulations.system_dynamics.demo
+
+5. Run the full regression suite:
+   python -m pytest -q
+
+Do not commit M22 until the full Windows test suite passes. The packaging
+container could not collect the entire DES runtime/AI test set because its
+environment lacks simpy and groq. Your existing Windows environment should
+run the full suite with the project's installed dependencies.

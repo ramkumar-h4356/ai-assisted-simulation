@@ -21,6 +21,7 @@ def test_evaluates_all_four_paradigms_and_reports_backend_availability():
     assert report.assessment_for(Paradigm.AGENT_BASED).backend_status is BackendStatus.IMPLEMENTED
     assert report.assessment_for(Paradigm.MATHEMATICAL).backend_status is BackendStatus.IMPLEMENTED
     assert report.assessment_for(Paradigm.DATA_DRIVEN).backend_status is BackendStatus.IMPLEMENTED
+    assert report.assessment_for(Paradigm.SYSTEM_DYNAMICS).backend_status is BackendStatus.IMPLEMENTED
 
 
 def test_des_evaluator_recognizes_process_resource_and_operational_event_rule():
@@ -165,6 +166,7 @@ def test_selected_data_driven_paradigm_can_pass_implementation_readiness_without
     report = assess_readiness(data_project(), selected_paradigm=Paradigm.DATA_DRIVEN)
     assert report.status is ReadinessStatus.READY_FOR_IMPLEMENTATION_PLANNING
     assert report.assessment_for(Paradigm.DATA_DRIVEN).backend_status is BackendStatus.IMPLEMENTED
+    assert report.assessment_for(Paradigm.SYSTEM_DYNAMICS).backend_status is BackendStatus.IMPLEMENTED
 
 
 def test_data_driven_readiness_does_not_block_on_unoperational_causal_mechanisms():

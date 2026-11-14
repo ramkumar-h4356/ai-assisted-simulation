@@ -13,6 +13,7 @@ class CompilationParadigm(str, Enum):
     AGENT_BASED = "agent_based"
     MATHEMATICAL = "mathematical"
     DATA_DRIVEN = "data_driven"
+    SYSTEM_DYNAMICS = "system_dynamics"
 
 
 class BindingSource(str, Enum):

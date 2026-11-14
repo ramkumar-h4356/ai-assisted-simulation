@@ -477,9 +477,10 @@ def run_readiness_assessment():
         "2": Paradigm.AGENT_BASED,
         "3": Paradigm.MATHEMATICAL,
         "4": Paradigm.DATA_DRIVEN,
+        "5": Paradigm.SYSTEM_DYNAMICS,
     }
     print("\nOptional: select a paradigm to test implementation-planning readiness.")
-    print("  1. Discrete-event  2. Agent-based  3. Mathematical  4. Data-driven")
+    print("  1. Discrete-event  2. Agent-based  3. Mathematical  4. Data-driven  5. System dynamics")
     selected = input("Selection (Enter to skip): ").strip()
     if selected:
         if selected not in choices:
@@ -566,12 +567,14 @@ def run_compilation_workflow():
     print("  2. Agent-based (ABM V1)")
     print("  3. Mathematical (Mathematical V1 / ODE: Euler, Heun, RK4)")
     print("  4. Data-driven (Data-Driven V1 / ridge VAR(p) forecasting)")
-    selected = input("Paradigm (1-4): ").strip()
+    print("  5. System dynamics (System Dynamics V1 / stock-and-flow)")
+    selected = input("Paradigm (1-5): ").strip()
     mapping = {
         "1": (CompilationParadigm.DISCRETE_EVENT, Paradigm.DISCRETE_EVENT),
         "2": (CompilationParadigm.AGENT_BASED, Paradigm.AGENT_BASED),
         "3": (CompilationParadigm.MATHEMATICAL, Paradigm.MATHEMATICAL),
         "4": (CompilationParadigm.DATA_DRIVEN, Paradigm.DATA_DRIVEN),
+        "5": (CompilationParadigm.SYSTEM_DYNAMICS, Paradigm.SYSTEM_DYNAMICS),
     }
     if selected not in mapping:
         print("Invalid paradigm selection.")
