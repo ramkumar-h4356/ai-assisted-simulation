@@ -1,0 +1,41 @@
+M24 — Cross-Engine Experiment Orchestration
+
+1. Save M24_Updates.zip in:
+   D:\Project Simulator\milestones
+
+2. In PowerShell:
+   cd "D:\Project Simulator\simulator_real_reorganized"
+   $source = "D:\Project Simulator\milestones\M24_Updates.zip"
+   Test-Path $source
+
+3. If Test-Path returns True, extract:
+   Expand-Archive -LiteralPath $source -DestinationPath . -Force
+
+4. Run the focused M24 tests:
+   python -m pytest -q tests/orchestration
+
+5. Run M10/M11 and workspace/API regression tests:
+   python -m pytest -q tests/experimentation tests/optimization tests/uncertainty tests/workbench tests/webapp
+
+6. Verify M19 replay compatibility:
+   python -m pytest -q tests/des/test_replay.py tests/simulation_studio/test_des_replay.py
+
+7. Verify the standalone CLI and Python compilation:
+   python -m orchestration.cli --help
+   python -m compileall -q main.py orchestration
+
+8. Run the complete project suite:
+   python -m pytest -q
+
+9. Do not commit until the complete Windows suite passes.
+
+The plan at scenarios/orchestration/cross_engine_suite.json is a five-paradigm
+template. Save integrity-verified M8 artifacts under outputs/m8_artifacts/
+using the filenames in that plan, or edit its paths. Run from the repository
+root with:
+   python -m orchestration.cli --plan scenarios/orchestration/cross_engine_suite.json --artifact-root . --output-dir outputs
+
+An optional comparison is intentionally not preconfigured. Add one only when
+the numeric metric has exactly the same name, unit and semantic meaning in
+each compared artifact. The semantic definition is a user assertion, not
+machine-verified equivalence. DES artifacts require SimPy.

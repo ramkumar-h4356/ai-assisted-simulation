@@ -77,7 +77,7 @@ tests/
 2. Install dependencies: `python -m pip install -r requirements-dev.txt`.
 3. Copy `.env.example` to `.env` and set `GROQ_API_KEY`.
 4. Run tests: `python -m pytest`.
-5. Start the CLI: `python main.py` (option 17 opens the M13 Project Workbench; options 18–19 run/inspect M23 optimization).
+5. Start the CLI: `python main.py` (option 17 opens the M13 Project Workbench; options 18–19 run/inspect M23 optimization; options 20–21 run/inspect M24 experiment suites).
 6. The standalone workspace manager is also available with `python -m workbench`.
 7. Start the M14 browser workbench with `python -m webapp`, then open `http://127.0.0.1:8765`.
 
@@ -247,3 +247,40 @@ Choose option 18 in `python main.py` to run optimization and option 19 to
 inspect a saved report. A non-interactive CLI is available with
 `python -m optimization.cli --help`. See `optimization/README.md`,
 `M23_ARCHITECTURE.md`, `M23_TEST_REPORT.md` and `MILESTONE23_REPORT.md`.
+
+
+## Cross-engine experiment orchestration (M24)
+
+M24 defines one bounded suite containing multiple independently compiled M8
+artifacts. Each member runs through the existing integrity-verified M9
+executor; the suite keeps each artifact's identity, paradigm, backend, M9
+experiment ID and result fingerprint separate. The suite report aggregates
+numeric and categorical metrics per member and parameter set, stores each M9
+result as a separate file, and writes an integrity-fingerprinted report plus
+a CSV summary.
+
+An optional comparison contract ranks groups only when the requested numeric
+metric name and unit match exactly and every requested replication for that
+group completed. The plan must supply a semantic definition asserting what
+the shared observable means across models. Identical metric names and units
+alone do not prove that different model outputs are conceptually equivalent.
+The report repeats this qualification. No comparison ranking is generated
+when fewer than two complete groups qualify.
+
+The suite has a global budget of 100 M9 executions. Each artifact path is
+relative to the explicitly configured artifact root and may not escape that
+root. The sample plan `scenarios/orchestration/cross_engine_suite.json` is a
+template: place the corresponding integrity-verified M8 artifacts beneath
+`outputs/m8_artifacts` or edit the plan paths before running.
+
+Run from the project root:
+
+```powershell
+python -m orchestration.cli --plan scenarios/orchestration/cross_engine_suite.json --artifact-root . --output-dir outputs
+```
+
+The main CLI exposes option 20 to run a suite and option 21 to inspect a
+fingerprint-verified M24 report. M24 orchestrates M9 executions; it does not
+merge different model equations, infer metric equivalence, alter artifacts,
+or replace M10 grid experiments, M11 uncertainty analysis or M23
+optimization. DES suite members require the SimPy runtime dependency.

@@ -1261,6 +1261,133 @@ def inspect_optimization_report():
         print(f"\nOptimization note: {warning}")
     print(f"\nReport integrity verified: {report_path}")
 
+
+def run_experiment_suite_workflow():
+    """Run an M24 suite of heterogeneous M8 artifacts through the common M9 executor."""
+    from pathlib import Path
+    from orchestration import execute_suite, export_summary_csv, load_plan, save_report
+
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs"
+    candidates = sorted((root / "scenarios" / "orchestration").glob("*.json"))
+    print("\n--- M24: Cross-Engine Experiment Orchestration ---")
+    if candidates:
+        print("Available suite plans:")
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate.relative_to(root)}")
+    selection = input("\nSuite plan number or JSON path: ").strip().strip('"')
+    if not selection:
+        print("No suite plan selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid suite plan number.")
+            return
+        plan_path = candidates[index - 1]
+    else:
+        plan_path = Path(selection).expanduser()
+        if not plan_path.is_absolute():
+            plan_path = (Path.cwd() / plan_path).resolve()
+    try:
+        plan = load_plan(plan_path)
+    except Exception as error:
+        print(f"Could not load M24 suite plan: {error}")
+        return
+
+    print(f"\nSuite: {plan.suite_name}")
+    print(f"Members: {len(plan.members)} | requested M9 executions: {plan.total_executions}/100")
+    for member in plan.members:
+        parameter_sets = len(member.parameter_sets) or 1
+        print(f"  {member.member_id}: {member.label} | artifact={member.artifact_path} | executions={member.runs * parameter_sets}")
+    if plan.comparison:
+        print(f"Comparison: {plan.comparison.metric_name} ({plan.comparison.unit or 'unitless'}) - {plan.comparison.direction}")
+        print(f"Semantic definition: {plan.comparison.semantic_definition}")
+    artifact_root_text = input(f"Artifact root [{root}]: ").strip().strip('"')
+    artifact_root = Path(artifact_root_text).expanduser() if artifact_root_text else root
+    if not artifact_root.is_absolute():
+        artifact_root = (Path.cwd() / artifact_root).resolve()
+    confirm = input("Run this cross-engine suite? [y/N]: ").strip().lower()
+    if confirm != "y":
+        print("Suite cancelled; no simulations were run.")
+        return
+    try:
+        report = execute_suite(plan, artifact_root=artifact_root, output_dir=output_dir)
+        report_path = save_report(report, output_dir / f"{report.suite_id}_report.json")
+        csv_path = export_summary_csv(report, output_dir / f"{report.suite_id}_metrics.csv")
+    except Exception as error:
+        print(f"M24 suite execution failed: {type(error).__name__}: {error}")
+        return
+
+    print(f"\n--- M24 Suite Summary ({report.status}) ---")
+    for member in report.members:
+        print(f"  {member.label}: {member.paradigm or 'unavailable'} | {member.status} | {member.successful_runs}/{member.total_runs} successful")
+        if member.error_message:
+            print(f"    {member.error_type}: {member.error_message}")
+    if report.ranking:
+        print("\nCross-member comparison:")
+        for item in report.ranking:
+            unit = f" {item.unit}" if item.unit else ""
+            print(f"  {item.rank}. {item.member_label} / {item.parameter_set}: {item.mean:.8g}{unit} (n={item.sample_size})")
+    for warning in report.warnings:
+        print(f"\nM24 note: {warning}")
+    print(f"\nM24 report: {report_path}")
+    print(f"Metric CSV: {csv_path}")
+    print(f"M9 member results: {output_dir}")
+
+
+def inspect_experiment_suite_report():
+    """Inspect an integrity-verified M24 suite report."""
+    from pathlib import Path
+    from orchestration import load_report
+
+    output_dir = Path(__file__).resolve().parent / "outputs"
+    candidates = sorted(
+        output_dir.glob("m24-*_report.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ) if output_dir.exists() else []
+    print("\n--- Inspect M24 Experiment Suite Report ---")
+    if candidates:
+        for index, candidate in enumerate(candidates[:10], start=1):
+            print(f"  {index}. {candidate}")
+    selection = input("\nReport number or M24 JSON path: ").strip().strip('"')
+    if not selection:
+        print("No report selected.")
+        return
+    if selection.isdigit() and candidates:
+        index = int(selection)
+        if not 1 <= index <= min(10, len(candidates)):
+            print("Invalid report number.")
+            return
+        report_path = candidates[index - 1]
+    else:
+        report_path = Path(selection).expanduser()
+        if not report_path.is_absolute():
+            report_path = (Path.cwd() / report_path).resolve()
+    try:
+        report = load_report(report_path)
+    except Exception as error:
+        print(f"Could not load or verify M24 report: {error}")
+        return
+    print(f"\nSuite: {report.suite_name} | status: {report.status}")
+    print(f"Members: {len(report.members)} | requested executions: {report.plan.total_executions}")
+    for member in report.members:
+        print(f"  {member.label}: {member.paradigm or 'unavailable'} | {member.status} | runs={member.successful_runs}/{member.total_runs}")
+        for metric in member.metrics:
+            if metric.value_type == "numeric":
+                print(f"    {metric.metric_name}: mean={metric.mean:.8g}, stddev={metric.population_stddev:.8g}, n={metric.sample_size} {metric.unit or ''}")
+            else:
+                categories = ", ".join(f"{item.value}={item.count}" for item in metric.categories)
+                print(f"    {metric.metric_name}: {categories} (n={metric.sample_size})")
+    if report.ranking:
+        print("\nComparison ranking:")
+        for item in report.ranking:
+            print(f"  {item.rank}. {item.member_label} / {item.parameter_set}: {item.mean:.8g}")
+    for warning in report.warnings:
+        print(f"\nM24 note: {warning}")
+    print(f"\nReport integrity verified: {report_path}")
+
 def main():
     """Display the program menu."""
     print("\n=== AI-Assisted Simulation System ===")
@@ -1283,8 +1410,10 @@ def main():
     print("17. Open the M13 project workbench")
     print("18. Run M23 objective-driven parameter optimization")
     print("19. Inspect a saved M23 optimization report")
+    print("20. Run a cross-engine experiment suite (M24)")
+    print("21. Inspect a saved M24 experiment suite report")
 
-    choice = input("\nChoose an option (1-19): ").strip()
+    choice = input("\nChoose an option (1-21): ").strip()
 
     if choice == "1":
         run_ai_simulation()
@@ -1325,8 +1454,12 @@ def main():
         run_optimization_workflow()
     elif choice == "19":
         inspect_optimization_report()
+    elif choice == "20":
+        run_experiment_suite_workflow()
+    elif choice == "21":
+        inspect_experiment_suite_report()
     else:
-        print("Invalid choice. Please run the program again and choose a number from 1 to 19.")
+        print("Invalid choice. Please run the program again and choose a number from 1 to 21.")
 
 
 

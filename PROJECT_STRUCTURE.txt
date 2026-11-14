@@ -422,8 +422,27 @@ tests/optimization/
   test_engine_and_serialization.py M9-backed ABM/mathematical/data-driven/system-dynamics optimization, constraints and report integrity
 scenarios/optimization/
   abm_random_search_plan.json  Illustrative user-authored ABM objective/search plan (paths must match selected M8 artifact)
-main.py             M23 option 18 optimization workflow and option 19 report inspection
+main.py             M23 options 18-19 and M24 options 20-21 experiment suite workflows
 M23_ARCHITECTURE.md Objective search architecture, M9 integration, report model, plan format and limitations
 MILESTONE23_REPORT.md M23 implementation summary and interpretation boundaries
 M23_TEST_REPORT.md  M23 focused and regression test results and verification boundary
 M23_APPLY_STEPS.txt Instructions to apply and verify the M23 update
+
+
+Milestone 24 additions:
+orchestration/
+  __init__.py       Public M24 suite orchestration API
+  models.py         Validated suite/member/comparison/report contracts and 100-run budget
+  engine.py         Secure artifact resolution, M9 suite execution, metrics and ranking
+  serialization.py  Strict plan/report JSON, SHA-256 fingerprints and CSV export
+  cli.py            Non-interactive cross-engine suite runner
+scenarios/orchestration/
+  cross_engine_suite.json  Five-paradigm template requiring user-provided M8 artifacts
+tests/orchestration/
+  test_models_and_serialization.py  M24 contracts, budget, plan/report round trips
+  test_engine.py    Cross-engine execution, comparison, path safety and member failures
+main.py             M24 option 20 suite execution and option 21 report inspection
+M24_ARCHITECTURE.md Architecture, workflow and metric comparability boundaries
+MILESTONE24_REPORT.md M24 implementation summary and V1 limitations
+M24_TEST_REPORT.md  Focused/regression test report and verification boundary
+M24_APPLY_STEPS.txt Instructions to apply and verify M24

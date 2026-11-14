@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "suite_name": "Cross-engine model comparison",
+  "members": [
+    {
+      "member_id": "traffic_abm",
+      "label": "Traffic agent-based model",
+      "artifact_path": "outputs/m8_artifacts/traffic_abm.json",
+      "runs": 3,
+      "base_seed": 700,
+      "continue_on_error": true,
+      "parameter_sets": []
+    },
+    {
+      "member_id": "clinic_des",
+      "label": "Clinic discrete-event model",
+      "artifact_path": "outputs/m8_artifacts/clinic_des.json",
+      "runs": 1,
+      "base_seed": null,
+      "continue_on_error": true,
+      "parameter_sets": []
+    },
+    {
+      "member_id": "supply_math",
+      "label": "Supply mathematical model",
+      "artifact_path": "outputs/m8_artifacts/supply_math.json",
+      "runs": 1,
+      "base_seed": null,
+      "continue_on_error": true,
+      "parameter_sets": []
+    },
+    {
+      "member_id": "weather_data",
+      "label": "Weather data-driven model",
+      "artifact_path": "outputs/m8_artifacts/weather_data.json",
+      "runs": 1,
+      "base_seed": null,
+      "continue_on_error": true,
+      "parameter_sets": []
+    },
+    {
+      "member_id": "epidemic_sd",
+      "label": "Epidemic system-dynamics model",
+      "artifact_path": "outputs/m8_artifacts/epidemic_sd.json",
+      "runs": 1,
+      "base_seed": null,
+      "continue_on_error": true,
+      "parameter_sets": []
+    }
+  ],
+  "comparison": null
+}
